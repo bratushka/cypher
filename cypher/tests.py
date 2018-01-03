@@ -114,21 +114,6 @@ class ModelTests(TestCase):
         self.assertEqual(instance.cypher_repr(), expected)
 
 
-# class NodeTests(TestCase):
-#     def test_cypher_repr(self):
-#         class MyModel(cypher.Node):
-#             integer = cypher.Props.Integer()
-#             floating = cypher.Props.Float()
-#
-#         instance = MyModel(
-#             integer=1,
-#             floating=1.1,
-#             labels=('First',),
-#         )
-#         expected = '(:`MyModel`:`First` { `floating`: 1.1, `integer`: 1 })'
-#         self.assertEqual(instance.cypher_repr(), expected)
-
-
 class DBTests(TestCase):
     def test__get_url_with_valid_url(self):
         address = 'bolt://some.address:7687'
@@ -171,16 +156,19 @@ class DBTests(TestCase):
 
         my_db = MyDB()
         my_node = MyNode()
-        my_edge = MyEdge()
+        my_other_node = MyNode()
+        my_edge = MyEdge(my_node, my_other_node)
 
-        my_db.models = [my_node, my_edge]
+        my_db.models = [my_node, my_other_node, my_edge]
         self.assertIsInstance(my_db.models, tuple)
         self.assertIs(my_db.models[0], my_node)
-        self.assertIs(my_db.models[1], my_edge)
+        self.assertIs(my_db.models[1], my_other_node)
+        self.assertIs(my_db.models[2], my_edge)
 
-        my_db.models = (my_edge, my_node)
+        my_db.models = (my_edge, my_node, my_other_node)
         self.assertIs(my_db.models[0], my_node)
-        self.assertIs(my_db.models[1], my_edge)
+        self.assertIs(my_db.models[1], my_other_node)
+        self.assertIs(my_db.models[2], my_edge)
 
     def test_query_create_without_edges(self):
         class MyDB(cypher.DB):
@@ -197,6 +185,31 @@ class DBTests(TestCase):
         expected = (
             'CREATE (a:`MyNode` { `age`: 21 }), (b:`MyNode` { `age`: 22 })'
             '\nRETURN a, b'
+        )
+
+        self.assertEqual(MyDB().create(*instances).query, expected)
+
+    def test_query_create_with_edges(self):
+        class MyDB(cypher.DB):
+            pass
+
+        class MyNode(cypher.Node):
+            age = cypher.Props.Integer()
+
+        class MyEdge(cypher.Edge):
+            parent = cypher.Props.Boolean()
+
+        son = MyNode(age=21)
+        father = MyNode(age=47)
+        son_to_father = MyEdge(son, father, parent=False)
+        father_to_son = MyEdge(father, son, parent=True)
+        instances = (son_to_father, father_to_son, son, father)
+
+        expected = (
+            'CREATE (a:`MyNode` { `age`: 21 }), (b:`MyNode` { `age`: 47 }),'
+            ' (a)-[c:`MyEdge` { `parent`: false }]->(b),'
+            ' (b)-[d:`MyEdge` { `parent`: true }]->(a)'
+            '\nRETURN a, b, c, d'
         )
 
         self.assertEqual(MyDB().create(*instances).query, expected)

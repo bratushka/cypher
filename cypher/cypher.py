@@ -1,4 +1,5 @@
 import abc
+import collections
 import itertools
 import math
 import string
@@ -117,6 +118,12 @@ class Model:
 
         return ' '.join((labels, '{', props, '}'))
 
+    def wrapped_repr(self, tag: str='') -> str:
+        raise NotImplementedError
+
+    def __hash__(self):
+        return id(self)
+
     def __str__(self):
         return self.cypher_repr()
 
@@ -125,12 +132,24 @@ class Node(Model):
     """
     Python representation of a node in graph.
     """
+    def wrapped_repr(self, tag: str='') -> str:
+        return '({}{})'.format(tag, self.cypher_repr())
 
 
 class Edge(Model):
     """
     Python representation of an edge in graph.
     """
+    def __init__(self, from_node: Model, to_node: Model, **kwargs):
+        self._nodes = (from_node, to_node)
+        super().__init__(**kwargs)
+
+    def wrapped_repr(self, tag: str='', frm: str='', to: str='') -> str:
+        return ''.join((
+            '({})-'.format(frm),
+            '[{}{}]'.format(tag, self.cypher_repr()),
+            '->({})'.format(to),
+        ))
 
 
 class DB:
@@ -184,27 +203,37 @@ class DB:
 
     @models.setter
     def models(self, value: Iterable[Model]):
+        if not all(isinstance(model, (Node, Edge)) for model in value):
+            error_str = 'Only `Node` and `Edge` instances can be used in query'
+            raise TypeError(error_str)
+
         self._models = tuple(sorted(value, key=lambda x: isinstance(x, Edge)))
 
     @property
     def query(self) -> str:
         tags = generate_tags(len(self.models))
+        node_map: collections.OrderedDict[Model, str] = collections.OrderedDict(
+            (m, next(tags))
+            for m in self.models
+        )
 
-        models = []
-        tag_list = []
-        for model in self.models:
-            tag = next(tags)
-            tag_list.append(tag)
-            models.append(
-                ('({}{})' if isinstance(model, Node) else '[{}{}]')
-                .format(tag, model.cypher_repr())
-            )
+        def get_model_tags(model: Model) -> Tuple[str, ...]:
+            if isinstance(model, Edge):
+                return (
+                    node_map[model],
+                    node_map[model._nodes[0]],
+                    node_map[model._nodes[1]],
+                )
+            return node_map[model],
 
         return ''.join((
             'CREATE ',
-            ', '.join(models),
+            ', '.join(
+                k.wrapped_repr(*get_model_tags(k))
+                for k, v in node_map.items()
+            ),
             '\nRETURN ',
-            ', '.join(tag_list),
+            ', '.join(node_map.values()),
         ))
 
     def __repr__(self):
@@ -218,7 +247,7 @@ class DB:
 
     def create(self, *models: Model) -> 'DB':
         self._action = 'CREATE'
-        self._models = models
+        self.models = models
 
         return self
 
