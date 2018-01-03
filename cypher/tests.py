@@ -238,3 +238,72 @@ class DBTests(TestCase):
         )
 
         self.assertEqual(MyDB().create(*instances).query, expected)
+
+    def test_query_match_without_edges(self):
+        class MyDB(cypher.DB):
+            pass
+
+        class MyNode(cypher.Node):
+            age = cypher.Props.Integer()
+
+        instances = (
+            MyNode(age=21),
+            MyNode(age=22),
+        )
+
+        expected = (
+            'MATCH (a:`MyNode` { `age`: 21 }), (b:`MyNode` { `age`: 22 })'
+            '\nRETURN a, b'
+        )
+
+        self.assertEqual(MyDB().match(*instances).query, expected)
+
+    # def test_query_create_with_edges(self):
+    #     class MyDB(cypher.DB):
+    #         pass
+    #
+    #     class MyNode(cypher.Node):
+    #         age = cypher.Props.Integer()
+    #
+    #     class MyEdge(cypher.Edge):
+    #         parent = cypher.Props.Boolean()
+    #
+    #     son = MyNode(age=21)
+    #     father = MyNode(age=47)
+    #     son_to_father = MyEdge(son, father, parent=False)
+    #     father_to_son = MyEdge(father, son, parent=True)
+    #     instances = (son_to_father, father_to_son, son, father)
+    #
+    #     expected = (
+    #         'CREATE (a:`MyNode` { `age`: 21 }), (b:`MyNode` { `age`: 47 }),'
+    #         ' (a)-[c:`MyEdge` { `parent`: false }]->(b),'
+    #         ' (b)-[d:`MyEdge` { `parent`: true }]->(a)'
+    #         '\nRETURN a, b, c, d'
+    #     )
+    #
+    #     self.assertEqual(MyDB().create(*instances).query, expected)
+    #
+    # def test_query_create_only_edges(self):
+    #     class MyDB(cypher.DB):
+    #         pass
+    #
+    #     class MyNode(cypher.Node):
+    #         age = cypher.Props.Integer()
+    #
+    #     class MyEdge(cypher.Edge):
+    #         parent = cypher.Props.Boolean()
+    #
+    #     son = MyNode(age=21)
+    #     father = MyNode(age=47)
+    #     son_to_father = MyEdge(son, father, parent=False)
+    #     father_to_son = MyEdge(father, son, parent=True)
+    #     instances = (son_to_father, father_to_son)
+    #
+    #     expected = (
+    #         'CREATE (a:`MyNode` { `age`: 21 }), (b:`MyNode` { `age`: 47 }),'
+    #         ' (a)-[c:`MyEdge` { `parent`: false }]->(b),'
+    #         ' (b)-[d:`MyEdge` { `parent`: true }]->(a)'
+    #         '\nRETURN a, b, c, d'
+    #     )
+    #
+    #     self.assertEqual(MyDB().create(*instances).query, expected)

@@ -180,8 +180,8 @@ class DB:
             auth=(self.user, self.password)
         )
 
-        self._action = None
-        self._models: Tuple[Model] = ()
+        self._action: str = None
+        self._models: Tuple[Model, ...] = None
 
     @classmethod
     def _get_url(cls) -> str:
@@ -198,7 +198,7 @@ class DB:
         ))
 
     @property
-    def models(self) -> Tuple[Model]:
+    def models(self) -> Tuple[Model, ...]:
         return self._models
 
     @models.setter
@@ -242,7 +242,7 @@ class DB:
             node_map[key] = next(tags)
 
         return ''.join((
-            'CREATE ',
+            self._action,
             ', '.join(
                 k.wrapped_repr(*self._get_model_tags(node_map, k))
                 for k, v in node_map.items()
@@ -251,11 +251,14 @@ class DB:
             ', '.join(node_map.values()),
         ))
 
-    def match(self):
-        raise NotImplementedError
+    def match(self, *models: Model):
+        self._action = 'MATCH '
+        self.models = models
+
+        return self
 
     def create(self, *models: Model) -> 'DB':
-        self._action = 'CREATE'
+        self._action = 'CREATE '
         self.models = models
 
         return self
