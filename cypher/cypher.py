@@ -3,7 +3,7 @@ import collections
 import itertools
 import math
 import string
-from typing import Any, Iterable, Generator, Tuple
+from typing import Any, Iterable, Generator, Mapping, Tuple
 
 from neo4j.v1 import GraphDatabase
 
@@ -141,7 +141,7 @@ class Edge(Model):
     Python representation of an edge in graph.
     """
     def __init__(self, from_node: Model, to_node: Model, **kwargs):
-        self._nodes = (from_node, to_node)
+        self.nodes = (from_node, to_node)
         super().__init__(**kwargs)
 
     def wrapped_repr(self, tag: str='', frm: str='', to: str='') -> str:
@@ -209,38 +209,47 @@ class DB:
 
         self._models = tuple(sorted(value, key=lambda x: isinstance(x, Edge)))
 
+    @staticmethod
+    def _get_model_tags(
+        node_map: Mapping[Model, str],
+        model: Model,
+    ) -> Tuple[str, ...]:
+        if isinstance(model, Edge):
+            return (
+                node_map[model],
+                node_map[model.nodes[0]],
+                node_map[model.nodes[1]],
+            )
+        return node_map[model],
+
     @property
     def query(self) -> str:
         tags = generate_tags(len(self.models))
-        node_map: collections.OrderedDict[Model, str] = collections.OrderedDict(
-            (m, next(tags))
-            for m in self.models
-        )
+        node_map = collections.OrderedDict()
 
-        def get_model_tags(model: Model) -> Tuple[str, ...]:
+        # First: add all the nodes.
+        for model in self.models:
             if isinstance(model, Edge):
-                return (
-                    node_map[model],
-                    node_map[model._nodes[0]],
-                    node_map[model._nodes[1]],
-                )
-            return node_map[model],
+                node_map.update((m, None) for m in model.nodes)
+            else:
+                node_map[model] = None
+        # Second: add all the labels.
+        for model in self.models:
+            if isinstance(model, Edge):
+                node_map[model] = None
+        # Third: add a tag to each of the models.
+        for key in node_map.keys():
+            node_map[key] = next(tags)
 
         return ''.join((
             'CREATE ',
             ', '.join(
-                k.wrapped_repr(*get_model_tags(k))
+                k.wrapped_repr(*self._get_model_tags(node_map, k))
                 for k, v in node_map.items()
             ),
             '\nRETURN ',
             ', '.join(node_map.values()),
         ))
-
-    def __repr__(self):
-        raise NotImplementedError
-
-    def __str__(self):
-        raise NotImplementedError
 
     def match(self):
         raise NotImplementedError
@@ -252,6 +261,9 @@ class DB:
         return self
 
     def update(self):
+        raise NotImplementedError
+
+    def delete(self):
         raise NotImplementedError
 
     def where(self):
