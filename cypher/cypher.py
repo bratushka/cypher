@@ -78,7 +78,7 @@ class Model:
                 self._extra_props[key] = value
 
     @property
-    def labels(self) -> tuple:
+    def labels(self) -> Tuple[str, ...]:
         return self._labels
 
     @labels.setter
