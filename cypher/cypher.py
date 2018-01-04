@@ -1,9 +1,10 @@
 import abc
 import collections
+import json
 import itertools
 import math
 import string
-from typing import Any, Iterable, Generator, Mapping, Tuple
+from typing import Any, Iterable, Generator, Mapping, Tuple, Union
 
 from neo4j.v1 import GraphDatabase
 
@@ -96,7 +97,8 @@ class Model:
 
         self._labels = (self.__class__.__name__,) + extra_labels
 
-    def cypher_repr(self) -> str:
+    # @TODO: remove this, use Query.represent() instead
+    def cypherify(self) -> str:
         def normalize(value: str) -> str:
             return value.replace('`', '``')
 
@@ -118,22 +120,20 @@ class Model:
 
         return ' '.join((labels, '{', props, '}'))
 
-    def wrapped_repr(self, tag: str='') -> str:
-        raise NotImplementedError
-
     def __hash__(self):
         return id(self)
 
     def __str__(self):
-        return self.cypher_repr()
+        return self.cypherify()
 
 
 class Node(Model):
     """
     Python representation of a node in graph.
     """
-    def wrapped_repr(self, tag: str='') -> str:
-        return '({}{})'.format(tag, self.cypher_repr())
+    # @TODO: remove this, use Query.represent() instead
+    def wrap(self, tag: str= '') -> str:
+        return '({}{})'.format(tag, self.cypherify())
 
 
 class Edge(Model):
@@ -144,11 +144,54 @@ class Edge(Model):
         self.nodes = (from_node, to_node)
         super().__init__(**kwargs)
 
-    def wrapped_repr(self, tag: str='', frm: str='', to: str='') -> str:
+    # @TODO: remove this, use Query.represent() instead
+    def wrap(self, tag: str= '', frm: str= '', to: str= '') -> str:
         return ''.join((
             '({})-'.format(frm),
-            '[{}{}]'.format(tag, self.cypher_repr()),
+            '[{}{}]'.format(tag, self.cypherify()),
             '->({})'.format(to),
+        ))
+
+
+class Query:
+    """
+    Utilities to generate
+    """
+    @staticmethod
+    def represent(
+        obj: Union[Node, Edge],
+        var: str='',
+        from_var: str='',
+        to_var: str='',
+    ) -> str:
+        def normalize(value: str) -> str:
+            return value.replace('`', '``')
+
+        if not isinstance(obj, (Node, Edge)):
+            raise TypeError
+
+        labels = ''.join(
+            ':`{}`'.format(normalize(label))
+            for label in obj.labels
+        )
+
+        prop_keys = sorted(
+            key for
+            key in dir(obj)
+            if isinstance(getattr(obj.__class__, key, None), BaseProp)
+        )
+        props = ', '.join(
+            ': '.join(('`' + key + '`', json.dumps(getattr(obj, key))))
+            for key in prop_keys
+        )
+        body = ' '.join((labels, '{', props, '}'))
+
+        if isinstance(obj, Node):
+            return '({}{})'.format(var, body)
+        return ''.join((
+            '({})-'.format(from_var),
+            '[{}{}]'.format(var, body),
+            '->({})'.format(to_var),
         ))
 
 
@@ -191,7 +234,9 @@ class DB:
             return cls.url
 
         return ''.join((
-            '' if cls.host.startswith('bolt://') else 'bolt://',
+            '' if cls.host.startswith('b    def wrap(self, tag: str= '') -> str:
+        raise NotImplementedError
+olt://') else 'bolt://',
             cls.host,
             ':',
             str(cls.port),
@@ -244,7 +289,7 @@ class DB:
         return ''.join((
             self._action,
             ', '.join(
-                k.wrapped_repr(*self._get_model_tags(node_map, k))
+                k.wrap(*self._get_model_tags(node_map, k))
                 for k, v in node_map.items()
             ),
             '\nRETURN ',
@@ -262,15 +307,3 @@ class DB:
         self.models = models
 
         return self
-
-    def update(self):
-        raise NotImplementedError
-
-    def delete(self):
-        raise NotImplementedError
-
-    def where(self):
-        raise NotImplementedError
-
-    def result(self):
-        raise NotImplementedError

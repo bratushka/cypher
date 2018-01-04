@@ -111,7 +111,7 @@ class ModelTests(TestCase):
             ' { `boolean`: true, `floating`: 1.1,'
             ' `integer`: 1, `string`: "text\\"" }'
         )
-        self.assertEqual(instance.cypher_repr(), expected)
+        self.assertEqual(instance.cypherify(), expected)
 
 
 class DBTests(TestCase):
