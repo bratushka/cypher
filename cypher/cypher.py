@@ -234,9 +234,7 @@ class DB:
             return cls.url
 
         return ''.join((
-            '' if cls.host.startswith('b    def wrap(self, tag: str= '') -> str:
-        raise NotImplementedError
-olt://') else 'bolt://',
+            '' if cls.host.startswith('bolt://') else 'bolt://',
             cls.host,
             ':',
             str(cls.port),
