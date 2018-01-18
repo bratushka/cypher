@@ -16,25 +16,47 @@ user, = (DB()
     [0]
 )
 ```
+```cypher
+CREATE
+    (a:User { email: 'admin@localhost', password: 'some_password' })
+RETURN a
+```
 
 ### Retrieve
 ```python
 user, = (DB()
     .match(User)
-    .where(User.email == 'admin@localhost')
+    .where(Value('email') == 'admin@localhost')
     .result()
     [0]
 )
 ```
+```cypher
+MATCH
+    (a:User)
+WHERE
+    a.email = 'admin@localhost'
+RETURN a
+```
 
 ### Update
 ```python
+# `user` should be fetched from the database, so having an internal ID
 user.password = 'some_new_password'
 user, = (DB()
     .update(user)
     .result()
     [0]
 )
+```
+```cypher
+MATCH
+    (a:User)
+WHERE
+    id(a) = 12345
+SET
+    a.password = 'some_new_password'
+RETURN a
 ```
 
 ### Delete
@@ -43,13 +65,26 @@ user, = (DB()
     .delete(user)
     .result()
 )
-#or
+# or
 (DB()
     .match(User)
-    .where(User.email == 'admin@localhost')
+    .where(Value('email') == 'admin@localhost')
     .delete()
     .result()
 )
+```
+```cypher
+MATCH
+    (a)
+WHERE
+    id(a) = 12345
+DETACH DELETE a
+// or
+MATCH
+    (a:User)
+WHERE
+    a.email = 'admin@localhost'
+DETACH DELETE a
 ```
 
 ## Complex example
@@ -73,30 +108,54 @@ john, knows, dow = (DB()
     .result()
     [0]
 )
-# If you don't need `john` - don't mention him in the `create` statement.
-# He will still be created in the database because `knows` instance depends on
-#  it. If `john` was fetched from database (so we are sure he exists) - he will
-#  not be created again.
+# If you don't need `john` to be returned, but it already exists - don't mention
+#  him in the `create` statement.
 knows, dow = (DB()
-    .create(knows)
-    .create(dow)
+    .create(knows, dow)
     .result()
     [0]
 )
+```
+```cypher
+CREATE
+    (a:User { email: 'john@localhost' }),
+    (b:User { email: 'dow@localhost' }),
+    (a)-[c:Knows { since: 730032 }]->(b)  // date(1999, 10, 5).toordinal()
+RETURN a, c, b
+// and if `john` existed before and was not mentioned in `create`
+MATCH
+    (a)
+WHERE
+    id(a) = 12345
+CREATE
+    (b:User { email: 'dow@localhost' }),
+    (a)-[c:Knows { since: 730032 }]->(b)
+RETURN a, c, b
 ```
 
 ### Retrieve
 ```python
 knows, dow = (DB()
     .match(User, 'john')
-    .where(User.email == 'john@localhost')
+    .where(Value('email') == 'john@localhost')
     .connected_through(Knows, 'knows')
-    .where(Knows.since >= datetime.date(1990, 1, 1))
+    .where(Value('since') >= datetime.date(1990, 1, 1))
     .to(User, 'dow')
-    .where(User.email.startswith('dow'))
+    .where(Value('email').startswith('dow'))
+    .where(Value('john.email') != Value('dow.email'))
     .result('knows', 'dow')
     [0]
 )
+```
+```cypher
+MATCH
+    (john:User)-[knows:Knows]->(dow:User)
+WHERE
+    john.email = 'john@localhost'
+AND knows.since >= 730032
+AND dow.email STARTS WITH 'dow'
+AND john.email <> dow.email
+RETURN knows, dow
 ```
 
 ### Update
@@ -125,10 +184,25 @@ dow, = (DB()
 #  will be deleted too.
 (DB()
     .match(User)
-    .where(User.email == 'john@localhost')
+    .where(Value('email') == 'john@localhost')
     .connected_through(Knows)
-    .to(User, 'a')
-    .delete('a')
+    .to(User, 'friend')
+    .delete('friend')
     .result()
 )
+```
+```cypher
+MATCH
+    (a:User),
+    (b:User)
+WHERE
+    id(a) = 12345
+AND id(b) = 23456
+DETACH DELETE a, b
+// second example
+MATCH
+    (a:User)-[b:Knows]->(friend:User)
+WHERE
+    a.email = 'john@localhost'
+DETACH DELETE friend
 ```

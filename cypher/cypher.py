@@ -53,6 +53,11 @@ class Props:
     class Integer(BaseProp):
         valid_types = (int,)
 
+        def validate(self, key: str, value: Any, model_name: str):
+            super().validate(key, value, model_name)
+
+            assert value < 9223372036854775808  # Should be less than 2^63
+
     class Float(BaseProp):
         valid_types = (int, float)
 
@@ -195,21 +200,15 @@ class Query:
         ))
 
 
+class Value:
+    """
+    Helper for `.where` method of the `DB` instances.
+    """
+
+
 class DB:
     """
-    The class to be used for building queries.
-
-    Example of usage:
-    data = (DB()
-        .match(User, 'a')
-        .where(User.dob > 123123)
-        .connected(Parent, 'b')
-        .where(Parent.q == 2)
-        .to(User, 'c')
-        .where(User.dob < 4)
-        .where('a.dob == b.dob')
-        .result()
-    )
+    Interface for interactions with database.
     """
     url = None
     host = 'cypher-db'
