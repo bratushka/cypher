@@ -10,7 +10,7 @@ class User(Node):
 ### Create
 ```python
 user = User(email='admin@localhost', password='some_password')
-user, = (DB()
+user, = (Query()
     .create(user)
     .result()
     [0]
@@ -24,18 +24,15 @@ RETURN a
 
 ### Retrieve
 ```python
-user, = (DB()
-    .match(User)
-    .where(Value('email') == 'admin@localhost')
+user, = (Query()
+    .match(User, User.email == 'admin@localhost')
     .result()
     [0]
 )
 ```
 ```cypher
 MATCH
-    (a:User)
-WHERE
-    a.email = 'admin@localhost'
+    (a:User { email: 'admin@localhost' })
 RETURN a
 ```
 
@@ -43,7 +40,7 @@ RETURN a
 ```python
 # `user` should be fetched from the database, so having an internal ID
 user.password = 'some_new_password'
-user, = (DB()
+user, = (Query()
     .update(user)
     .result()
     [0]
@@ -51,7 +48,7 @@ user, = (DB()
 ```
 ```cypher
 MATCH
-    (a:User)
+    (a)
 WHERE
     id(a) = 12345
 SET
@@ -61,13 +58,13 @@ RETURN a
 
 ### Delete
 ```python
-(DB()
+(Query()
     .delete(user)
     .result()
 )
 # or
-(DB()
-    .match(User)
+(Query()
+    .match(User, User.email == 'admin@localhost')
     .where(Value('email') == 'admin@localhost')
     .delete()
     .result()
@@ -81,9 +78,7 @@ WHERE
 DETACH DELETE a
 // or
 MATCH
-    (a:User)
-WHERE
-    a.email = 'admin@localhost'
+    (a:User { email: 'admin@localhost' })
 DETACH DELETE a
 ```
 
@@ -103,14 +98,14 @@ john = User(email='john@localhost')
 dow = User(email='dow@localhost')
 knows = Knows(john, dow, since=datetime.date(1999, 10, 5))
 
-john, knows, dow = (DB()
+john, knows, dow = (Query()
     .create(john, knows, dow)
     .result()
     [0]
 )
 # If you don't need `john` to be returned, but it already exists - don't mention
 #  him in the `create` statement.
-knows, dow = (DB()
+knows, dow = (Query()
     .create(knows, dow)
     .result()
     [0]
@@ -135,13 +130,10 @@ RETURN a, c, b
 
 ### Retrieve
 ```python
-knows, dow = (DB()
-    .match(User, 'john')
-    .where(Value('email') == 'john@localhost')
-    .connected_through(Knows, 'knows')
-    .where(Value('since') >= datetime.date(1990, 1, 1))
-    .to(User, 'dow')
-    .where(Value('email').startswith('dow'))
+knows, dow = (Query()
+    .match((User, 'john'), User.email == 'john@localhost')
+    .connected_through((Knows, 'knows'), Knows.since >= date(1990, 1, 1))
+    .to((User, 'dow'), User.email.startswith('dow'))
     .where(Value('john.email') != Value('dow.email'))
     .result('knows', 'dow')
     [0]
@@ -149,10 +141,9 @@ knows, dow = (DB()
 ```
 ```cypher
 MATCH
-    (john:User)-[knows:Knows]->(dow:User)
+    (john:User { email: 'john@localhost' })-[knows:Knows]->(dow:User)
 WHERE
-    john.email = 'john@localhost'
-AND knows.since >= 730032
+    knows.since >= 730032
 AND dow.email STARTS WITH 'dow'
 AND john.email <> dow.email
 RETURN knows, dow
@@ -163,9 +154,8 @@ RETURN knows, dow
 dow.email = 'another@localhost'
 knows.since = datetime.date(2000, 1, 1)
 
-dow, = (DB()
-    .update(dow, 'dow')
-    .update(knows, 'knows')
+dow, = (Query()
+    .update((dow, 'dow'), knows)
     .result('dow')
     [0]
 )
@@ -175,18 +165,17 @@ dow, = (DB()
 ```python
 # This will delete `john` and `dow`. `knows` will be deleted too because an edge
 #  cannot exist without any of its nodes.
-(DB()
+(Query()
     .delete(john, dow)
     .result()
 )
 
 # This will delete all the users, whom John knows. All the edges of those users
 #  will be deleted too.
-(DB()
-    .match(User)
-    .where(Value('email') == 'john@localhost')
+(Query()
+    .match(User, User.email == 'john@localhost')
     .connected_through(Knows)
-    .to(User, 'friend')
+    .to((User, 'friend'))
     .delete('friend')
     .result()
 )
@@ -201,8 +190,6 @@ AND id(b) = 23456
 DETACH DELETE a, b
 // second example
 MATCH
-    (a:User)-[b:Knows]->(friend:User)
-WHERE
-    a.email = 'john@localhost'
+    (a:User { email: 'john@localhost' })-[b:Knows]->(friend:User)
 DETACH DELETE friend
 ```

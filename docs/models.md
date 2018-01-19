@@ -7,6 +7,8 @@ class Person(Node):
         validations = (
             (lambda obj: (obj.height + obj.age) < 30),
         )
+        abstract = True
+        database = 'specific'
 
     is_admin = Props.Boolean(
         default=True,
