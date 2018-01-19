@@ -175,7 +175,7 @@ dow, = (Query()
 (Query()
     .match(User, User.email == 'john@localhost')
     .connected_through(Knows)
-    .to((User, 'friend'))
+    .by((User, 'friend'))
     .delete('friend')
     .result()
 )
@@ -190,6 +190,6 @@ AND id(b) = 23456
 DETACH DELETE a, b
 // second example
 MATCH
-    (a:User { email: 'john@localhost' })-[b:Knows]->(friend:User)
+    (a:User { email: 'john@localhost' })<-[b:Knows]-(friend:User)
 DETACH DELETE friend
 ```
