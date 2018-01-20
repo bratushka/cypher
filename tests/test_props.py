@@ -1,6 +1,7 @@
 """
 Tests for `props.py`.
 """
+from datetime import date, datetime
 from unittest import TestCase
 
 from cypher.props import BaseProp, Props
@@ -86,9 +87,10 @@ class FloatTests(TestCase):
     """
     def test_types(self):
         """
-        Should accept only boolean values.
+        Should accept float and integer values.
         """
         Props.Float.validate(1.)
+        Props.Float.validate(1)
 
         with self.assertRaises(TypeError):
             Props.Float.validate('1.')
@@ -100,9 +102,41 @@ class StringTests(TestCase):
     """
     def test_types(self):
         """
-        Should accept only boolean values.
+        Should accept only string values.
         """
         Props.String.validate('String value')
+
+        for t in (int, float, bool):
+            with self.assertRaises(TypeError):
+                Props.String.validate(t('1'))
+
+
+class DateTests(TestCase):
+    """
+    Tests for Props.Date class.
+    """
+    def test_types(self):
+        """
+        Should accept date and datetime values.
+        """
+        Props.Date.validate(date(2000, 1, 1))
+        Props.Date.validate(datetime(2000, 1, 1, 1, 1, 1))
+
+        for t in (int, float, bool):
+            with self.assertRaises(TypeError):
+                Props.String.validate(t('1'))
+
+
+class DateTimeTests(TestCase):
+    """
+    Tests for Props.DateTime class.
+    """
+    def test_types(self):
+        """
+        Should accept date and datetime values.
+        """
+        Props.DateTime.validate(date(2000, 1, 1))
+        Props.DateTime.validate(datetime(2000, 1, 1, 1, 1, 1))
 
         for t in (int, float, bool):
             with self.assertRaises(TypeError):

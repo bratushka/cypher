@@ -1,7 +1,11 @@
+from datetime import date, datetime
 from typing import Any, Callable, Iterable, Type
 
 
 class BaseProp:
+    """
+    Base class for all properties.
+    """
     types: Iterable[Type] = ()
     rules: Iterable[Callable] = ()
 
@@ -10,6 +14,11 @@ class BaseProp:
         *,
         required: bool=False,
     ):
+        """
+        Configure property.
+
+        :param required: if None value is acceptable.
+        """
         self.required = required
 
     @classmethod
@@ -63,8 +72,8 @@ class Props:
     class Integer(BaseProp):
         types = (int,)
         rules = (
-            lambda x: x < 1 << 63,
-            lambda x: x >= -1 << 63,
+            lambda x: x < 9223372036854775808,  # Neo4j constraint
+            lambda x: x >= -9223372036854775808,  # Neo4j constraint
         )
 
     class Float(BaseProp):
@@ -72,3 +81,9 @@ class Props:
 
     class String(BaseProp):
         types = (str,)
+
+    class Date(BaseProp):
+        types = (date, datetime)
+
+    class DateTime(BaseProp):
+        types = (date, datetime)
