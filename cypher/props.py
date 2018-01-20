@@ -1,5 +1,8 @@
 from datetime import date, datetime
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Callable, Iterable, Type, TypeVar
+
+
+T = TypeVar('T')
 
 
 class BaseProp:
@@ -60,6 +63,26 @@ class BaseProp:
         """
         cls.validate_type(value)
         cls.validate_rules(value)
+
+    @classmethod
+    def to_cypher_value(cls, value: T) -> T:
+        """
+        Transform a python value to a value suitable for cypher.
+
+        :param value: value to transform
+        :return: transformed value
+        """
+        return value
+
+    @classmethod
+    def to_python_value(cls, value: T) -> T:
+        """
+        Transform a cypher value to a python analogue.
+
+        :param value: value to transform
+        :return: transformed value
+        """
+        return value
 
 
 class Props:

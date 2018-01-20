@@ -38,6 +38,28 @@ class BasePropsTests(TestCase):
             SomeProp.validate_rules(1)
         SomeProp.validate_type(-1)
 
+    def test_to_cypher_value(self):
+        """
+        In simple cases `to_cypher_value` should return the same value.
+        """
+        class SomeProp(BaseProp):
+            pass
+
+        values = [True, 1, 1., 'string']
+        for value in values:
+            self.assertIs(value, SomeProp.to_cypher_value(value))
+
+    def test_to_python_value(self):
+        """
+        In simple cases `to_python_value` should return the same value.
+        """
+        class SomeProp(BaseProp):
+            pass
+
+        values = [True, 1, 1., 'string']
+        for value in values:
+            self.assertIs(value, SomeProp.to_python_value(value))
+
 
 class BooleanTests(TestCase):
     """
