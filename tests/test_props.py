@@ -38,6 +38,17 @@ class BasePropsTests(TestCase):
             SomeProp.validate_rules(1)
         SomeProp.validate_type(-1)
 
+    def test_normalize(self):
+        """
+        In simple cases `normalize` should return the same value.
+        """
+        class SomeProp(BaseProp):
+            pass
+
+        values = [True, 'string']
+        for value in values:
+            self.assertIs(value, SomeProp.normalize(value))
+
     def test_to_cypher_value(self):
         """
         In simple cases `to_cypher_value` should return the same value.
@@ -117,6 +128,16 @@ class FloatTests(TestCase):
         with self.assertRaises(TypeError):
             Props.Float.validate('1.')
 
+    def test_normalize(self):
+        """
+        `normalize` should return float.
+        """
+        values = [True, 1, 1., 1.1, -1, -1.]
+        expected_values = [1., 1., 1., 1.1, -1., -1.]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(value, expected)
+
 
 class StringTests(TestCase):
     """
@@ -148,6 +169,16 @@ class DateTests(TestCase):
             with self.assertRaises(TypeError):
                 Props.String.validate(t('1'))
 
+    def test_normalize(self):
+        """
+        `normalize` should return `date`.
+        """
+        values = [date(2000, 1, 2), datetime(2000, 1, 2, 3, 4, 5)]
+        expected_values = [date(2000, 1, 2), date(2000, 1, 2)]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.Date.normalize(value), expected)
+
 
 class DateTimeTests(TestCase):
     """
@@ -163,3 +194,16 @@ class DateTimeTests(TestCase):
         for t in (int, float, bool):
             with self.assertRaises(TypeError):
                 Props.String.validate(t('1'))
+
+    def test_normalize(self):
+        """
+        `normalize` should return `datetime`.
+        """
+        values = [date(2000, 1, 2), datetime(2000, 1, 2, 3, 4, 5)]
+        expected_values = [
+            datetime(2000, 1, 2, 0, 0, 0),
+            datetime(2000, 1, 2, 3, 4, 5)
+        ]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.DateTime.normalize(value), expected)

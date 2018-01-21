@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Any, Callable, Iterable, Type, TypeVar
+from typing import Any, Callable, Iterable, Type, TypeVar, Union
 
 
 T = TypeVar('T')
@@ -64,8 +64,18 @@ class BaseProp:
         cls.validate_type(value)
         cls.validate_rules(value)
 
-    @classmethod
-    def to_cypher_value(cls, value: T) -> T:
+    @staticmethod
+    def normalize(value: T) -> T:
+        """
+        Transform assigned value to the expected type.
+
+        :param value: value to transform
+        :return: transformed value
+        """
+        return value
+
+    @staticmethod
+    def to_cypher_value(value: T) -> T:
         """
         Transform a python value to a value suitable for cypher.
 
@@ -74,8 +84,8 @@ class BaseProp:
         """
         return value
 
-    @classmethod
-    def to_python_value(cls, value: T) -> T:
+    @staticmethod
+    def to_python_value(value: T) -> T:
         """
         Transform a cypher value to a python analogue.
 
@@ -102,11 +112,47 @@ class Props:
     class Float(BaseProp):
         types = (int, float)
 
+        @staticmethod
+        def normalize(value: Union[int, float]) -> float:
+            """
+            Transform the value to `float`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            return float(value)
+
     class String(BaseProp):
         types = (str,)
 
     class Date(BaseProp):
         types = (date, datetime)
 
+        @staticmethod
+        def normalize(value: Union[date, datetime]) -> date:
+            """
+            Transform the value to `date`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            if isinstance(value, datetime):
+                return value.date()
+
+            return value
+
     class DateTime(BaseProp):
         types = (date, datetime)
+
+        @staticmethod
+        def normalize(value: Union[date, datetime]) -> datetime:
+            """
+            Transform the value to `datetime`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            if isinstance(value, date) and not isinstance(value, datetime):
+                return datetime(value.year, value.month, value.day)
+
+            return value
