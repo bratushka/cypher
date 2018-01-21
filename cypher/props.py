@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
 
 
@@ -141,6 +142,26 @@ class Props:
 
             return value
 
+        @staticmethod
+        def to_cypher_value(value: date) -> int:
+            """
+            Transform a `date` value to an ordinal `int`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            return value.toordinal()
+
+        @staticmethod
+        def to_python_value(value: int) -> date:
+            """
+            Transform an ordinal `int` to a `date` value.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            return date.fromordinal(value)
+
     class DateTime(BaseProp):
         types = (date, datetime)
 
@@ -153,6 +174,29 @@ class Props:
             :return: transformed value
             """
             if isinstance(value, date) and not isinstance(value, datetime):
-                return datetime(value.year, value.month, value.day)
+                return datetime(*value.timetuple()[:3])
 
             return value
+
+        @staticmethod
+        def to_cypher_value(value: datetime) -> int:
+            """
+            Transform a `datetime` value to a microtimestamp `int`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            result = value.timestamp() * 1_000_000
+
+            low: int = floor(result)
+            return low if isclose(low, result) else ceil(result)
+
+        @staticmethod
+        def to_python_value(value: int) -> datetime:
+            """
+            Transform a microtimestamp `int` to a `datetime`.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            return datetime.fromtimestamp(value / 1_000_000)

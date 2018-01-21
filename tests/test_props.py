@@ -179,6 +179,26 @@ class DateTests(TestCase):
         for value, expected in zip(values, expected_values):
             self.assertEqual(Props.Date.normalize(value), expected)
 
+    def test_to_cypher_value(self):
+        """
+        `to_cypher_value` should transform `date` to `int`.
+        """
+        values = [date(1, 1, 1), date(1, 2, 1)]
+        expected_values = [1, 32]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.Date.to_cypher_value(value), expected)
+
+    def test_to_python_value(self):
+        """
+        `to_python_value` should transform `int` to `date`.
+        """
+        values = [1, 32]
+        expected_values = [date(1, 1, 1), date(1, 2, 1)]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.Date.to_python_value(value), expected)
+
 
 class DateTimeTests(TestCase):
     """
@@ -202,8 +222,34 @@ class DateTimeTests(TestCase):
         values = [date(2000, 1, 2), datetime(2000, 1, 2, 3, 4, 5)]
         expected_values = [
             datetime(2000, 1, 2, 0, 0, 0),
-            datetime(2000, 1, 2, 3, 4, 5)
+            datetime(2000, 1, 2, 3, 4, 5),
         ]
 
         for value, expected in zip(values, expected_values):
             self.assertEqual(Props.DateTime.normalize(value), expected)
+
+    def test_to_cypher_value(self):
+        """
+        `to_cypher_value` should transform `datetime` to `int` microtimestamp.
+        """
+        values = [
+            datetime(1970, 1, 1, 0, 0, 0, 1),
+            datetime(1970, 1, 1, 0, 0, 1, 1),
+        ]
+        expected_values = [1, 1_000_001]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.DateTime.to_cypher_value(value), expected)
+
+    def test_to_python_value(self):
+        """
+        `to_python_value` should transform `int` microtimestamp to `datetime`.
+        """
+        values = [1, 1_000_001]
+        expected_values = [
+            datetime(1970, 1, 1, 0, 0, 0, 1),
+            datetime(1970, 1, 1, 0, 0, 1, 1),
+        ]
+
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(Props.DateTime.to_python_value(value), expected)
