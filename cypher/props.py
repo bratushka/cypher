@@ -19,14 +19,14 @@ class BaseProp:
     def __init__(
         self,
         *,
-        required: bool=False,
+        required: bool=True,
+        default: Any=None,
     ):
         """
         Configure property.
-
-        :param required: if None value is acceptable.
         """
         self.required = required
+        self.default = default
 
     @classmethod
     def validate_type(cls, value: Any):

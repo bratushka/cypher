@@ -125,7 +125,8 @@ class Query:
         limit: int=None,
         skip: int=None,
         order_by: str=None,
-        transaction: None=None,
+        transaction: None=None,  # should be with __enter__ and __exit__
+        no_exec: bool=False,
     ) -> Iterable:
         """
         Execute the query and map the results.
@@ -136,6 +137,7 @@ class Query:
         :param skip: skip a number of results
         :param order_by: add ordering
         :param transaction: transaction in which to perform the query
-        :return: result of the query mapped by appropriate types.
+        :param no_exec: return query without hitting the database
+        :return: result of the query mapped by appropriate types
         """
         raise NotImplementedError
