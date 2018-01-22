@@ -190,6 +190,6 @@ AND id(b) = 23456
 DETACH DELETE a, b
 // second example
 MATCH
-    (a:User { email: 'john@localhost' })<-[b:Knows]-(friend:User)
+    (a:User { email: 'john@localhost' })<-[b:Knows]-  (friend:User)
 DETACH DELETE friend
 ```

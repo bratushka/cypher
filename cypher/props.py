@@ -1,3 +1,6 @@
+"""
+Properties for models.
+"""
 from datetime import date, datetime
 from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
