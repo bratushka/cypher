@@ -12,6 +12,9 @@ class ModelTests(TestCase):
     Test common functionality of Node and Edge.
     """
     def test_init(self):
+        """
+        Test the model instantiation.
+        """
         class SomeModel(Model):
             string = Props.String()
             integer = Props.Integer(default=2)
