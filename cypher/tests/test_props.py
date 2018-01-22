@@ -4,7 +4,7 @@ Tests for `props.py`.
 from datetime import date, datetime
 from unittest import TestCase
 
-from cypher.props import BaseProp, Props
+from ..props import BaseProp, Props
 
 
 class BasePropsTests(TestCase):
@@ -136,7 +136,7 @@ class FloatTests(TestCase):
         expected_values = [1., 1., 1., 1.1, -1., -1.]
 
         for value, expected in zip(values, expected_values):
-            self.assertEqual(value, expected)
+            self.assertEqual(Props.Float.normalize(value), expected)
 
 
 class StringTests(TestCase):

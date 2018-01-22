@@ -1,0 +1,23 @@
+sudo: required
+
+env:
+  - DOCKER_COMPOSE_VERSION=1.18.0
+
+services:
+    - docker
+
+before_install:
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+before_script:
+  - docker-compose build
+  - docker-compose up -d
+
+script:
+  - docker exec -it cypher nosetests --with-coverage
+
+after_success:
+  - docker exec -it cypher codecov --token=6d3f88a3-9f94-4ae2-86c7-de1a314e3b18

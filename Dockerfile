@@ -3,6 +3,7 @@ FROM python:alpine3.6
 RUN apk add --no-cache --virtual build-essentials \
     musl-dev \
     gcc \
+    git \
     postgresql-dev \
     python3-dev \
     make

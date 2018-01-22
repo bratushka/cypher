@@ -60,14 +60,11 @@ RETURN a
 ```python
 (Query()
     .delete(user)
-    .result()
 )
 # or
 (Query()
     .match(User, User.email == 'admin@localhost')
-    .where(Value('email') == 'admin@localhost')
     .delete()
-    .result()
 )
 ```
 ```cypher
@@ -125,7 +122,7 @@ WHERE
 CREATE
     (b:User { email: 'dow@localhost' }),
     (a)-[c:Knows { since: 730032 }]->(b)
-RETURN a, c, b
+RETURN c, b
 ```
 
 ### Retrieve
@@ -167,7 +164,6 @@ dow, = (Query()
 #  cannot exist without any of its nodes.
 (Query()
     .delete(john, dow)
-    .result()
 )
 
 # This will delete all the users, whom John knows. All the edges of those users
@@ -177,7 +173,6 @@ dow, = (Query()
     .connected_through(Knows)
     .by((User, 'friend'))
     .delete('friend')
-    .result()
 )
 ```
 ```cypher

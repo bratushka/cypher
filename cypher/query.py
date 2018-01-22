@@ -125,6 +125,7 @@ class Query:
         limit: int=None,
         skip: int=None,
         order_by: str=None,
+        transaction: None=None,
     ) -> Iterable:
         """
         Execute the query and map the results.
@@ -134,6 +135,7 @@ class Query:
         :param limit: limit the number of results
         :param skip: skip a number of results
         :param order_by: add ordering
+        :param transaction: transaction in which to perform the query
         :return: result of the query mapped by appropriate types.
         """
         raise NotImplementedError

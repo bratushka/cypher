@@ -1,0 +1,7 @@
+[run]
+include =
+    cypher/*
+omit =
+    cypher/tests/*
+exclude_lines =
+    raise NotImplementedError

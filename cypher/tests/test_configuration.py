@@ -3,7 +3,7 @@ Tests for `configuration.py`.
 """
 from unittest import TestCase
 
-from cypher import Config, exceptions
+from .. import Config, exceptions
 
 
 class ConfigTests(TestCase):
