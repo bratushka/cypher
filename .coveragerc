@@ -3,5 +3,7 @@ include =
     cypher/*
 omit =
     cypher/tests/*
+
+[report]
 exclude_lines =
     raise NotImplementedError
