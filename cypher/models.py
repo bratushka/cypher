@@ -2,15 +2,18 @@
 Objects representing the cypher nodes and edges.
 """
 import abc
+import uuid
 from typing import Mapping
 
-from .props import BaseProp
+from .props import BaseProp, Props
 
 
 class Model(abc.ABC):
     """
     Common logic for Node and Edge.
     """
+    uid = Props.String()
+
     class Meta:
         unique_together = ()
         validations = ()
@@ -24,6 +27,7 @@ class Model(abc.ABC):
             for prop in dir(cls)
             if isinstance(getattr(self, prop), BaseProp)
         }
+        kwargs.setdefault('uid', uuid.uuid4().hex)
 
         for name, prop in props.items():
             value = kwargs.get(name, prop.default)

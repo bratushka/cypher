@@ -17,18 +17,17 @@ class QueryTests(TestCase):
             stuff = Props.Boolean()
             age = Props.Integer()
             height = Props.Float()
-            name = Props.String(required=False)
             nationality = Props.String(required=False)
 
         human = Human(
             stuff=True,
             age=30,
             height=2,
-            name='John',
+            uid='uid',
         )
-        expected = ':Human {age: 30, height: 2.0, name: "John", stuff: true}'
+        expected = ':Human {age: 30, height: 2.0, stuff: true, uid: "uid"}'
 
-        self.assertEqual(Query().represent(human), expected)
+        self.assertEqual(Query.represent(human), expected)
 
     # def test_create(self):
     #     """
