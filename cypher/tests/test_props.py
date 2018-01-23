@@ -56,9 +56,10 @@ class BasePropsTests(TestCase):
         class SomeProp(BaseProp):
             pass
 
-        values = [True, 1, 1., 'string']
-        for value in values:
-            self.assertIs(value, SomeProp.to_cypher_value(value))
+        values = [True, 1, 1., 'str"ing']
+        expected_values = ['true', '1', '1.0', '"str\\"ing"']
+        for value, expected in zip(values, expected_values):
+            self.assertEqual(SomeProp.to_cypher_value(value), expected)
 
     def test_to_python_value(self):
         """
@@ -184,7 +185,7 @@ class DateTests(TestCase):
         `to_cypher_value` should transform `date` to `int`.
         """
         values = [date(1, 1, 1), date(1, 2, 1)]
-        expected_values = [1, 32]
+        expected_values = ["1", "32"]
 
         for value, expected in zip(values, expected_values):
             self.assertEqual(Props.Date.to_cypher_value(value), expected)
@@ -236,7 +237,7 @@ class DateTimeTests(TestCase):
             datetime(1970, 1, 1, 0, 0, 0, 1),
             datetime(1970, 1, 1, 0, 0, 1, 1),
         ]
-        expected_values = [1, 1_000_001]
+        expected_values = ["1", "1000001"]
 
         for value, expected in zip(values, expected_values):
             self.assertEqual(Props.DateTime.to_cypher_value(value), expected)

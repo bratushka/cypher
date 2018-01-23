@@ -1,16 +1,17 @@
-from typing import Iterable, Tuple, Type, Union
+from enum import Enum, auto
+from typing import Iterable, List, Tuple, Type, Union
 
 from .comparisons import Comparison
 from .models import Edge, Model, Node
+from .props import BaseProp
 
 
 ModelInstance = Union[
-    Model,
-    Tuple[Model, str],
+    Union[Edge, Node],
+    Tuple[Union[Edge, Node], str],
 ]
 ModelUnit = Union[
-    Model,
-    Type[Model],
+    ModelInstance,
     Tuple[Model, str],
     Tuple[Type[Model], str],
 ]
@@ -28,18 +29,75 @@ NodeUnit = Union[
 ]
 
 
+class Orders:
+    CREATE = auto()
+    MATCH = auto()
+    MERGE = auto()
+
+
+class Action:
+    def __init__(
+        self,
+        action: auto,
+        model: Union[Edge, Node, Type[Union[Edge, Node]]],
+        variable: str=None,
+    ):
+        is_type = issubclass(model, (Edge, Node))
+
+        self.action = action
+        self.model = model if is_type else type(model)
+        self.instance = None if is_type else model
+        self.variable = variable
+
+        if action == Orders.CREATE and self.instance is None:
+            assert False  # @TODO: raise some nice exception
+
+
 class Query:
     """
     Cypher query builder.
     """
-    def create(self, *models: ModelInstance) -> 'Query':
+    def __init__(self):
+        self.actions: List[Action] = []
+
+    @staticmethod
+    def represent(model: Union[Edge, Node]) -> str:
+        """
+        Stringify a model.
+
+        :param model: model to stringify
+        :return: cypher representation
+        """
+        cls = type(model)
+        label = cls.__name__
+        props = []
+        for name in sorted(dir(cls)):
+            prop_type = getattr(cls, name)
+
+            if isinstance(prop_type, BaseProp):
+                value = getattr(model, name)
+                if value is not None:
+                    props.append((name, prop_type.to_cypher_value(value)))
+
+        return ':%s {%s}' % (
+            label,
+            ', '.join(map(lambda pair: ': '.join(pair), props)),
+        )
+
+    def create(self, *instances: ModelInstance) -> 'Query':
         """
         Schedule models for creation.
 
-        :param models: models to create
+        :param instances: models to create
         :return: self
         """
-        raise NotImplementedError
+        for instance in instances:
+            if isinstance(instance, tuple):
+                self.actions.append(Action(Orders.CREATE, *instance))
+            else:
+                self.actions.append(Action(Orders.CREATE, instance))
+
+        return self
 
     def update(self, *models: ModelInstance) -> 'Query':
         """
@@ -140,4 +198,29 @@ class Query:
         :param no_exec: return query without hitting the database
         :return: result of the query mapped by appropriate types
         """
-        raise NotImplementedError
+        import itertools
+        import json
+
+        action_type = None
+        action_index = 0
+        query = []
+
+        while True:
+            try:
+                action_type = self.actions[action_index].action
+            except IndexError:
+                break
+
+            actions = tuple(itertools.takewhile(
+                lambda a: a.action == action_type,
+                self.actions[action_index:],
+            ))
+            action_index += len(actions)
+
+            # if action_type == Orders.CREATE:
+
+
+        if no_exec:
+            return ''.join(query)
+        else:
+            raise NotImplementedError

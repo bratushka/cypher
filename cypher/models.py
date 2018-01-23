@@ -26,12 +26,14 @@ class Model(abc.ABC):
         }
 
         for name, prop in props.items():
-            if name in kwargs or prop.default is not None:
-                value = kwargs.get(name, prop.default)
+            value = kwargs.get(name, prop.default)
+
+            if value is not None:
                 normalized = prop.normalize(value)
                 prop.validate(normalized)
-
                 setattr(self, name, normalized)
+            elif value is None and not prop.required:
+                setattr(self, name, None)
             else:
                 error_text = (
                     'Cannot initialize a `{}` without `{}`'

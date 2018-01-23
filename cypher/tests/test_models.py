@@ -16,19 +16,22 @@ class ModelTests(TestCase):
         Test the model instantiation.
         """
         class SomeModel(Model):
+            boolean = Props.Boolean(required=False)
             string = Props.String()
-            integer = Props.Integer(default=2)
+            partial = Props.Float(default=2)
 
         with self.assertRaises(ValueError):
             SomeModel()
 
         instance = SomeModel(string='string')
+        self.assertEqual(instance.boolean, None)
         self.assertEqual(instance.string, 'string')
-        self.assertEqual(instance.integer, 2)
+        self.assertEqual(instance.partial, 2.)
 
         with self.assertRaises(TypeError):
             SomeModel(string=2)
 
-        instance = SomeModel(string='string', integer=3)
+        instance = SomeModel(boolean=False, string='string', partial=3)
+        self.assertEqual(instance.boolean, False)
         self.assertEqual(instance.string, 'string')
-        self.assertEqual(instance.integer, 3)
+        self.assertEqual(instance.partial, 3.)

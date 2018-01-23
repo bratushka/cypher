@@ -1,6 +1,7 @@
 """
 Properties for models.
 """
+import json
 from datetime import date, datetime
 from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
@@ -79,14 +80,14 @@ class BaseProp:
         return value
 
     @staticmethod
-    def to_cypher_value(value: T) -> T:
+    def to_cypher_value(value: T) -> str:
         """
         Transform a python value to a value suitable for cypher.
 
         :param value: value to transform
         :return: transformed value
         """
-        return value
+        return json.dumps(value)
 
     @staticmethod
     def to_python_value(value: T) -> T:
@@ -146,14 +147,14 @@ class Props:
             return value
 
         @staticmethod
-        def to_cypher_value(value: date) -> int:
+        def to_cypher_value(value: date) -> str:
             """
-            Transform a `date` value to an ordinal `int`.
+            Transform a `date` value to a stringified ordinal value.
 
             :param value: value to transform
             :return: transformed value
             """
-            return value.toordinal()
+            return str(value.toordinal())
 
         @staticmethod
         def to_python_value(value: int) -> date:
@@ -182,9 +183,9 @@ class Props:
             return value
 
         @staticmethod
-        def to_cypher_value(value: datetime) -> int:
+        def to_cypher_value(value: datetime) -> str:
             """
-            Transform a `datetime` value to a microtimestamp `int`.
+            Transform a `datetime` value to a stringified microtimestamp.
 
             :param value: value to transform
             :return: transformed value
@@ -192,7 +193,7 @@ class Props:
             result = value.timestamp() * 1_000_000
 
             low: int = floor(result)
-            return low if isclose(low, result) else ceil(result)
+            return str(low) if isclose(low, result) else str(ceil(result))
 
         @staticmethod
         def to_python_value(value: int) -> datetime:

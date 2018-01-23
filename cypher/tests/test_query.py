@@ -12,19 +12,37 @@ class QueryTests(TestCase):
     """
     Test building queries.
     """
-    def test_create(self):
-        """
-        The most simple `create` scenario.
-        """
+    def test_represent(self):
         class Human(Node):
-            name = Props.String()
+            stuff = Props.Boolean()
+            age = Props.Integer()
+            height = Props.Float()
+            name = Props.String(required=False)
+            nationality = Props.String(required=False)
 
-        human = Human(name='John')
-        query = Query().create(human).result(no_exec=True)
-        expected = (
-            'CREATE'
-            '    (a:Human {name: "John"})'
-            'RETURN a'
+        human = Human(
+            stuff=True,
+            age=30,
+            height=2,
+            name='John',
         )
+        expected = ':Human {age: 30, height: 2.0, name: "John", stuff: true}'
 
-        self.assertEqual(query, expected)
+        self.assertEqual(Query().represent(human), expected)
+
+    # def test_create(self):
+    #     """
+    #     The most simple `create` scenario.
+    #     """
+    #     class Human(Node):
+    #         name = Props.String()
+    #
+    #     human = Human(name='John')
+    #     query = Query().create(human).result(no_exec=True)
+    #     expected = (
+    #         'CREATE'
+    #         '    (a:Human {name: "John"})'
+    #         'RETURN a'
+    #     )
+    #
+    #     self.assertEqual(query, expected)
