@@ -167,13 +167,14 @@ class Query:
         """
         raise NotImplementedError
 
-    def delete(self, *variables: str) -> 'Query':
+    def delete(self, *variables: str) -> dict:
         """
         Schedule the models represented by the listed variables for deletion.
 
         :param variables: models to delete
         :return: self
         """
+        # return tx.run(query).summary().counters
         raise NotImplementedError
 
     def result(
@@ -198,29 +199,26 @@ class Query:
         :param no_exec: return query without hitting the database
         :return: result of the query mapped by appropriate types
         """
-        import itertools
-        import json
-
-        action_type = None
-        action_index = 0
-        query = []
-
-        while True:
-            try:
-                action_type = self.actions[action_index].action
-            except IndexError:
-                break
-
-            actions = tuple(itertools.takewhile(
-                lambda a: a.action == action_type,
-                self.actions[action_index:],
-            ))
-            action_index += len(actions)
-
-            # if action_type == Orders.CREATE:
-
-
-        if no_exec:
-            return ''.join(query)
-        else:
-            raise NotImplementedError
+        # import itertools
+        #
+        # action_type = None
+        # action_index = 0
+        # query = []
+        #
+        # while True:
+        #     try:
+        #         action_type = self.actions[action_index].action
+        #     except IndexError:
+        #         break
+        #
+        #     actions = tuple(itertools.takewhile(
+        #         lambda a: a.action == action_type,
+        #         self.actions[action_index:],
+        #     ))
+        #     action_index += len(actions)
+        #
+        #     # if action_type == Orders.CREATE:
+        #
+        # if no_exec:
+        #     return ''.join(query)
+        raise NotImplementedError
