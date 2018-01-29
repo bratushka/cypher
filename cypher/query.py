@@ -148,6 +148,7 @@ class Query:
         """
         self.chains.append(MatchingChain(self.model_by_var, self.var_by_model))
 
+        # @TODO: export to a separate method everything from here...
         if isinstance(node, tuple):
             variable = '_' + node[1]
             node = node[0]
@@ -158,22 +159,13 @@ class Query:
             self.chains[-1].add_condition(Equality(variable, 'uid', node.uid))
             node = type(node)
         self.chains[-1].add_node(node)
+        # ... to here
 
         self.model_by_var[variable] = node
         self.var_by_model[node] = variable
         self.return_order.append(variable)
 
         return self
-
-    # def match_or_create(self, node: NodeUnit, *where: Comparison) -> 'Query':
-    #     """
-    #     Set the starting node to the cypher `MERGE` query.
-    #
-    #     :param node: node to match
-    #     :param where: conditions for the `node` to match
-    #     :return: self
-    #     """
-    #     raise NotImplementedError
 
     def connected_through(
         self,

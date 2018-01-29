@@ -8,7 +8,7 @@ from ..models import Node
 from ..query import Query
 
 
-class QueryTests(TestCase):
+class MatchTests(TestCase):
     """
     Test building queries.
     """
@@ -40,5 +40,43 @@ class QueryTests(TestCase):
             'MATCH (a:Human)'
             '\nWHERE a.uid = "human_uid"'
             '\nRETURN a'
+        )
+        self.assertEqual(query, expected)
+
+    def test_combined_match_by_class(self):
+        """
+        The most simple `match` scenario.
+        """
+        class Human(Node):
+            pass
+
+        class Animal(Node):
+            pass
+
+        query = Query().match(Human).match(Animal).result(no_exec=True)
+        expected = (
+            'MATCH (a:Human)'
+            '\nMATCH (b:Animal)'
+            '\nRETURN a, b'
+        )
+        self.assertEqual(query, expected)
+
+    def test_combined_match_by_class_and_instance(self):
+        """
+        The most simple `match` scenario.
+        """
+        class Human(Node):
+            pass
+
+        class Animal(Node):
+            pass
+
+        human = Human(uid='human_uid')
+        query = Query().match(human).match(Animal).result(no_exec=True)
+        expected = (
+            'MATCH (a:Human)'
+            '\nWHERE a.uid = "human_uid"'
+            '\nMATCH (b:Animal)'
+            '\nRETURN a, b'
         )
         self.assertEqual(query, expected)
