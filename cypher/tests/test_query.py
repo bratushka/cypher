@@ -80,3 +80,19 @@ class MatchTests(TestCase):
             '\nRETURN a, b'
         )
         self.assertEqual(query, expected)
+
+    def test_match_by_class_with_comparison(self):
+        """
+        Add a `where` to the most simple `match` scenario.
+        """
+
+        class Human(Node):
+            age = Props.Integer()
+
+        query = Query().match(Human, Human.age > 21).result(no_exec=True)
+        expected = (
+            'MATCH (a:Human)'
+            '\nWHERE a.age > 21'
+            '\nRETURN a'
+        )
+        self.assertEqual(query, expected)

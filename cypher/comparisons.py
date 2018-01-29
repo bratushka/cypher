@@ -1,7 +1,5 @@
 from typing import Any, Type
 
-from .models import Model
-
 
 class Comparison:
     """
@@ -9,7 +7,13 @@ class Comparison:
     """
     sign = ''
 
-    def __init__(self, cls: Type[Model], variable: str, prop: str, value: Any):
+    def __init__(
+        self,
+        cls: Type['Model'],
+        variable: str,
+        prop: str,
+        value: Any,
+    ):
         self.var = variable
         self.prop = prop
         self.value = getattr(cls, prop).to_cypher_value(value)

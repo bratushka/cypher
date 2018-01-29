@@ -6,6 +6,8 @@ from datetime import date, datetime
 from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
 
+from . import comparisons
+
 
 T = TypeVar('T')
 
@@ -98,6 +100,24 @@ class BaseProp:
         :return: transformed value
         """
         return value
+
+    def _comparison_creator(
+        self,
+        comparison_type: Type[comparisons.Comparison],
+        value: Any,
+    ) -> Callable:
+        def comparison(model_type: Union['Edge', 'Node'], variable: str):
+            prop = next(
+                name for name in dir(model_type)
+                if getattr(model_type, name) is self
+            )
+
+            return comparison_type(model_type, variable, prop, value)
+
+        return comparison
+
+    def __gt__(self, other) -> Callable:
+        return self._comparison_creator(comparisons.Greater, other)
 
 
 class Props:

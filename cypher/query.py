@@ -1,7 +1,16 @@
 import enum
 import itertools
 import string
-from typing import Generator, Iterable, List, MutableMapping, Tuple, Type, Union
+from typing import (
+    Callable,
+    Generator,
+    Iterable,
+    List,
+    MutableMapping,
+    Tuple,
+    Type,
+    Union,
+)
 
 from .comparisons import Comparison, Equal
 from .exceptions import BrokenChain
@@ -119,6 +128,7 @@ class Query:
         self.return_order = []
         self.chains: List[Chain] = []
         self.generator = generate_variables()
+        self.model: ModelType = None
 
     def create(self, *instances: ModelInstance) -> 'Query':
         """
@@ -138,7 +148,7 @@ class Query:
         """
         raise NotImplementedError
 
-    def match(self, node: NodeUnit, *where: Comparison) -> 'Query':
+    def match(self, node: NodeUnit, *where: Callable) -> 'Query':
         """
         Set the starting node to the cypher `MATCH` query.
 
@@ -146,7 +156,8 @@ class Query:
         :param where: conditions for the `node` to match
         :return: self
         """
-        self.chains.append(MatchingChain(self.model_by_var, self.var_by_model))
+        chain = MatchingChain(self.model_by_var, self.var_by_model)
+        self.chains.append(chain)
 
         # @TODO: export to a separate method everything from here...
         if isinstance(node, tuple):
@@ -158,9 +169,13 @@ class Query:
         if isinstance(node, Node):
             uid = node.uid
             node = type(node)
-            self.chains[-1].add_comparison(Equal(node, variable, 'uid', uid))
-        self.chains[-1].add_node(node)
+            chain.add_comparison(Equal(node, variable, 'uid', uid))
+        chain.add_node(node)
         # ... to here
+        self.model = node
+
+        for condition in where:
+            chain.add_comparison(condition(self.model, variable))
 
         self.model_by_var[variable] = node
         self.var_by_model[node] = variable

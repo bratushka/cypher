@@ -32,7 +32,7 @@ class DB:
         if not self._driver:
             self._driver = GraphDatabase.driver(
                 self.url,
-                auth=(self.username, self.password)
+                auth=(self.username, self.password),
             )
 
         return self._driver
