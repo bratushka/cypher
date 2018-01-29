@@ -28,7 +28,7 @@ class MatchTests(TestCase):
 
     def test_match_by_instance(self):
         """
-        The most simple `match` scenario.
+        Match by class + add condition by instance.
         """
         class Human(Node):
             pass
@@ -45,7 +45,7 @@ class MatchTests(TestCase):
 
     def test_combined_match_by_class(self):
         """
-        The most simple `match` scenario.
+        Combination of 2 most simple `match` scenarios.
         """
         class Human(Node):
             pass
@@ -63,7 +63,7 @@ class MatchTests(TestCase):
 
     def test_combined_match_by_class_and_instance(self):
         """
-        The most simple `match` scenario.
+        Combination of matching by class and instance.
         """
         class Human(Node):
             pass
