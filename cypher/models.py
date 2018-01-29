@@ -45,6 +45,9 @@ class Model(abc.ABC):
                 )
                 raise ValueError(error_text)
 
+    def __hash__(self):
+        return id(self)
+
 
 class Node(Model):
     """

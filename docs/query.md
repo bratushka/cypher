@@ -10,6 +10,7 @@ From:
 1. `Query()`
 
 To:
+1. `.match()`
 1. `.create() | .update()`
 1. `.result()`
 1. `.delete()`
@@ -46,6 +47,7 @@ From:
 1. `.connected_through()`
 
 To:
+1. `.match()`
 1. `.connected_through()`
 1. `.create() | .update()`
 1. `.result()`

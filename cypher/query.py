@@ -1,7 +1,10 @@
-from enum import Enum, auto
-from typing import Iterable, List, Tuple, Type, Union
+import enum
+import itertools
+import string
+from typing import Generator, Iterable, List, MutableMapping, Tuple, Type, Union
 
 from .comparisons import Comparison
+from .exceptions import BrokenChain
 from .models import Edge, Model, Node
 from .props import BaseProp
 
@@ -27,30 +30,73 @@ NodeUnit = Union[
     Tuple[Node, str],
     Tuple[Type[Node], str],
 ]
+ModelType = Type[Union[Edge, Node]]
 
 
-class Orders:
-    CREATE = auto()
-    MATCH = auto()
-    MERGE = auto()
+def generate_variables() -> Generator[str, None, None]:
+    """
+    Generate variables: "a", "b", ..., "z", "aa", "ab", ...
+
+    :return: generator of variables
+    """
+    for i in itertools.count(1):
+        for letters in itertools.product(string.ascii_lowercase, repeat=i):
+            yield ''.join(letters)
 
 
-class Action:
+class Direction(enum.Enum):
+    LEFT = enum.auto()
+    RIGHT = enum.auto()
+
+
+class Chain:
     def __init__(
         self,
-        action: auto,
-        model: Union[Edge, Node, Type[Union[Edge, Node]]],
-        variable: str=None,
+        model_by_var: MutableMapping[str, Model],
+        var_by_model: MutableMapping[Model, str],
     ):
-        is_type = issubclass(model, (Edge, Node))
+        self.model_by_var = model_by_var
+        self.var_by_model = var_by_model
 
-        self.action = action
-        self.model = model if is_type else type(model)
-        self.instance = None if is_type else model
-        self.variable = variable
+    def stringify(self):
+        raise NotImplementedError
 
-        if action == Orders.CREATE and self.instance is None:
-            assert False  # @TODO: raise some nice exception
+
+class MatchingChain(Chain):
+    def __init__(
+        self,
+        model_by_var: MutableMapping[str, Model],
+        var_by_model: MutableMapping[Model, str],
+    ):
+        super().__init__(model_by_var, var_by_model)
+        # self.conditions = []
+        self.models = []
+        self.directions = []
+
+    def add_node(self, node: Type[Node]):
+        self.models.append(node)
+
+    def stringify(self) -> str:
+        pattern = ['({})']
+
+        for i in range(len(self.models[1::2])):
+            pattern.append('{}-[{{}}]-{}({{}})'.format(
+                self.directions[i] == Direction.LEFT,
+                self.directions[i] == Direction.RIGHT,
+            ))
+
+        return 'MATCH ' + ''.join(pattern).format(*(
+            ''.join((self.var_by_model[model], ':', model.__name__))
+            for model in self.models
+        ))
+
+
+# class CreateChain(Chain):
+#     pass
+#
+#
+# class UpdateChain(Chain):
+#     pass
 
 
 class Query:
@@ -58,31 +104,11 @@ class Query:
     Cypher query builder.
     """
     def __init__(self):
-        self.actions: List[Action] = []
-
-    @staticmethod
-    def represent(model: Union[Edge, Node]) -> str:
-        """
-        Stringify a model.
-
-        :param model: model to stringify
-        :return: cypher representation
-        """
-        cls = type(model)
-        label = cls.__name__
-        props = []
-        for name in sorted(dir(cls)):
-            prop_type = getattr(cls, name)
-
-            if isinstance(prop_type, BaseProp):
-                value = getattr(model, name)
-                if value is not None:
-                    props.append((name, prop_type.to_cypher_value(value)))
-
-        return ':%s {%s}' % (
-            label,
-            ', '.join(map(lambda pair: ': '.join(pair), props)),
-        )
+        self.model_by_var: MutableMapping[str, Model] = {}
+        self.var_by_model: MutableMapping[Model, str] = {}
+        self.return_order = []
+        self.chains: List[Chain] = []
+        self.generator = generate_variables()
 
     def create(self, *instances: ModelInstance) -> 'Query':
         """
@@ -91,13 +117,7 @@ class Query:
         :param instances: models to create
         :return: self
         """
-        for instance in instances:
-            if isinstance(instance, tuple):
-                self.actions.append(Action(Orders.CREATE, *instance))
-            else:
-                self.actions.append(Action(Orders.CREATE, instance))
-
-        return self
+        raise NotImplementedError
 
     def update(self, *models: ModelInstance) -> 'Query':
         """
@@ -116,7 +136,15 @@ class Query:
         :param where: conditions for the `node` to match
         :return: self
         """
-        raise NotImplementedError
+        self.chains.append(MatchingChain(self.model_by_var, self.var_by_model))
+        self.chains[-1].add_node(node)
+
+        variable = next(self.generator)
+        self.model_by_var[variable] = node
+        self.var_by_model[node] = variable
+        self.return_order.append(variable)
+
+        return self
 
     def match_or_create(self, node: NodeUnit, *where: Comparison) -> 'Query':
         """
@@ -128,12 +156,20 @@ class Query:
         """
         raise NotImplementedError
 
-    def connected_through(self, edge: EdgeUnit, *where: Comparison) -> 'Query':
+    def connected_through(
+        self,
+        edge: EdgeUnit,
+        *where: Comparison,
+        min_connections: int=1,
+        max_connections: int=1,
+    ) -> 'Query':
         """
         Add an edge to the cypher query.
 
         :param edge: edge to match
         :param where: conditions for the `edge` to match
+        :param min_connections: minimum connection length
+        :param max_connections: maximum connection length
         :return: self
         """
         raise NotImplementedError
@@ -199,26 +235,11 @@ class Query:
         :param no_exec: return query without hitting the database
         :return: result of the query mapped by appropriate types
         """
-        # import itertools
-        #
-        # action_type = None
-        # action_index = 0
-        # query = []
-        #
-        # while True:
-        #     try:
-        #         action_type = self.actions[action_index].action
-        #     except IndexError:
-        #         break
-        #
-        #     actions = tuple(itertools.takewhile(
-        #         lambda a: a.action == action_type,
-        #         self.actions[action_index:],
-        #     ))
-        #     action_index += len(actions)
-        #
-        #     # if action_type == Orders.CREATE:
-        #
-        # if no_exec:
-        #     return ''.join(query)
+        command = '\n'.join((
+            *(chain.stringify() for chain in self.chains),
+            'RETURN ' + ', '.join(self.return_order),
+        ))
+
+        if no_exec:
+            return command
         raise NotImplementedError

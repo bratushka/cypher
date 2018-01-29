@@ -87,7 +87,7 @@ class BaseProp:
         :param value: value to transform
         :return: transformed value
         """
-        return json.dumps(value)
+        return json.dumps(value, ensure_ascii=False)
 
     @staticmethod
     def to_python_value(value: T) -> T:
