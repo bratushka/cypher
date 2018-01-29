@@ -137,9 +137,14 @@ class Query:
         :return: self
         """
         self.chains.append(MatchingChain(self.model_by_var, self.var_by_model))
-        self.chains[-1].add_node(node)
 
-        variable = next(self.generator)
+        if isinstance(node, tuple):
+            variable = '_' + node[1]
+            node = node[0]
+        else:
+            variable = next(self.generator)
+
+        self.chains[-1].add_node(node)
         self.model_by_var[variable] = node
         self.var_by_model[node] = variable
         self.return_order.append(variable)

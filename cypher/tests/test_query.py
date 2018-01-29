@@ -43,9 +43,9 @@ class QueryTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-        # query = Query().match((Human, 'a')).result(no_exec=True)
-        # expected = (
-        #     'MATCH (_a:Human)'
-        #     'RETURN _a'
-        # )
-        # self.assertEqual(query, expected)
+        query = Query().match((Human, 'a')).result(no_exec=True)
+        expected = (
+            'MATCH (_a:Human)'
+            '\nRETURN _a'
+        )
+        self.assertEqual(query, expected)
