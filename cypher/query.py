@@ -3,7 +3,7 @@ import itertools
 import string
 from typing import Generator, Iterable, List, MutableMapping, Tuple, Type, Union
 
-from .comparisons import Comparison, Equality
+from .comparisons import Comparison, Equal
 from .exceptions import BrokenChain
 from .models import Edge, Model, Node
 from .props import BaseProp
@@ -69,15 +69,15 @@ class MatchingChain(Chain):
         var_by_model: MutableMapping[Model, str],
     ):
         super().__init__(model_by_var, var_by_model)
-        self.conditions = []
+        self.comparisons = []
         self.models = []
         self.directions = []
 
     def add_node(self, node: Type[Node]):
         self.models.append(node)
 
-    def add_condition(self, condition: Comparison):
-        self.conditions.append(condition)
+    def add_comparison(self, comparison: Comparison):
+        self.comparisons.append(comparison)
 
     def stringify(self) -> str:
         pattern = ['({})']
@@ -93,9 +93,9 @@ class MatchingChain(Chain):
             for model in self.models
         ))
 
-        if self.conditions:
+        if self.comparisons:
             result += '\nWHERE ' + '\n  AND '.join(
-                condition.stringify() for condition in self.conditions
+                condition.stringify() for condition in self.comparisons
             )
 
         return result
@@ -156,8 +156,9 @@ class Query:
             variable = next(self.generator)
 
         if isinstance(node, Node):
-            self.chains[-1].add_condition(Equality(variable, 'uid', node.uid))
+            uid = node.uid
             node = type(node)
+            self.chains[-1].add_comparison(Equal(node, variable, 'uid', uid))
         self.chains[-1].add_node(node)
         # ... to here
 
