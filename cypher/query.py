@@ -3,7 +3,7 @@ import itertools
 import string
 from typing import Generator, Iterable, List, MutableMapping, Tuple, Type, Union
 
-from .comparisons import Comparison
+from .comparisons import Comparison, Equality
 from .exceptions import BrokenChain
 from .models import Edge, Model, Node
 from .props import BaseProp
@@ -69,12 +69,15 @@ class MatchingChain(Chain):
         var_by_model: MutableMapping[Model, str],
     ):
         super().__init__(model_by_var, var_by_model)
-        # self.conditions = []
+        self.conditions = []
         self.models = []
         self.directions = []
 
     def add_node(self, node: Type[Node]):
         self.models.append(node)
+
+    def add_condition(self, condition: Comparison):
+        self.conditions.append(condition)
 
     def stringify(self) -> str:
         pattern = ['({})']
@@ -85,10 +88,17 @@ class MatchingChain(Chain):
                 self.directions[i] == Direction.RIGHT,
             ))
 
-        return 'MATCH ' + ''.join(pattern).format(*(
+        result = 'MATCH ' + ''.join(pattern).format(*(
             ''.join((self.var_by_model[model], ':', model.__name__))
             for model in self.models
         ))
+
+        if self.conditions:
+            result += '\nWHERE ' + '\n  AND '.join(
+                condition.stringify() for condition in self.conditions
+            )
+
+        return result
 
 
 # class CreateChain(Chain):
@@ -144,22 +154,26 @@ class Query:
         else:
             variable = next(self.generator)
 
+        if isinstance(node, Node):
+            self.chains[-1].add_condition(Equality(variable, 'uid', node.uid))
+            node = type(node)
         self.chains[-1].add_node(node)
+
         self.model_by_var[variable] = node
         self.var_by_model[node] = variable
         self.return_order.append(variable)
 
         return self
 
-    def match_or_create(self, node: NodeUnit, *where: Comparison) -> 'Query':
-        """
-        Set the starting node to the cypher `MERGE` query.
-
-        :param node: node to match
-        :param where: conditions for the `node` to match
-        :return: self
-        """
-        raise NotImplementedError
+    # def match_or_create(self, node: NodeUnit, *where: Comparison) -> 'Query':
+    #     """
+    #     Set the starting node to the cypher `MERGE` query.
+    #
+    #     :param node: node to match
+    #     :param where: conditions for the `node` to match
+    #     :return: self
+    #     """
+    #     raise NotImplementedError
 
     def connected_through(
         self,

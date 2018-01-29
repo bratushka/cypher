@@ -12,24 +12,7 @@ class QueryTests(TestCase):
     """
     Test building queries.
     """
-    # def test_represent(self):
-    #     class Human(Node):
-    #         stuff = Props.Boolean()
-    #         age = Props.Integer()
-    #         height = Props.Float()
-    #         nationality = Props.String(required=False)
-    #
-    #     human = Human(
-    #         stuff=True,
-    #         age=30,
-    #         height=2,
-    #         uid='uid',
-    #     )
-    #     expected = ':Human {age: 30, height: 2.0, stuff: true, uid: "uid"}'
-    #
-    #     self.assertEqual(Query.represent(human), expected)
-
-    def test_match(self):
+    def test_match_by_class(self):
         """
         The most simple `match` scenario.
         """
@@ -43,9 +26,19 @@ class QueryTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-        query = Query().match((Human, 'a')).result(no_exec=True)
+    def test_match_by_instance(self):
+        """
+        The most simple `match` scenario.
+        """
+        class Human(Node):
+            pass
+
+        human = Human(uid='human_uid')
+
+        query = Query().match(human).result(no_exec=True)
         expected = (
-            'MATCH (_a:Human)'
-            '\nRETURN _a'
+            'MATCH (a:Human)'
+            '\nWHERE a.uid = "human_uid"'
+            '\nRETURN a'
         )
         self.assertEqual(query, expected)
