@@ -5,7 +5,7 @@ class Comparison:
     """
     Common logic for all comparisons.
     """
-    sign = ''
+    operator = ''
 
     def __init__(
         self,
@@ -19,12 +19,21 @@ class Comparison:
         self.value = getattr(cls, prop).to_cypher_value(value)
 
     def stringify(self):
-        return '{}.{} {} {}'.format(self.var, self.prop, self.sign, self.value)
+        return '{}.{} {} {}'.format(
+            self.var,
+            self.prop,
+            self.operator,
+            self.value
+        )
 
 
 class Equal(Comparison):
-    sign = '='
+    operator = '='
 
 
 class Greater(Comparison):
-    sign = '>'
+    operator = '>'
+
+
+class In(Comparison):
+    operator = 'IN'

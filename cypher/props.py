@@ -106,7 +106,10 @@ class BaseProp:
         comparison_type: Type[comparisons.Comparison],
         value: Any,
     ) -> Callable:
-        def comparison(model_type: Union['Edge', 'Node'], variable: str):
+        def comparison(
+            model_type: Union['Edge', 'Node'],
+            variable: str,
+        ) -> comparisons.Comparison:
             prop = next(
                 name for name in dir(model_type)
                 if getattr(model_type, name) is self
@@ -116,8 +119,23 @@ class BaseProp:
 
         return comparison
 
+    def __eq__(self, other) -> Callable[[Type, str], comparisons.Comparison]:
+        """
+        Used for `==` comparison.
+        """
+        return self._comparison_creator(comparisons.Equal, other)
+
     def __gt__(self, other) -> Callable:
+        """
+        Used for `>` comparison.
+        """
         return self._comparison_creator(comparisons.Greater, other)
+
+    def __matmul__(self, other) -> Callable:
+        """
+        Used for `@` comparison.
+        """
+        return self._comparison_creator(comparisons.In, other)
 
 
 class Props:

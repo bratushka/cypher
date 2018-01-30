@@ -1,6 +1,7 @@
 """
 Tests for `query.py`.
 """
+from datetime import date
 from unittest import TestCase
 
 from ..props import Props
@@ -87,12 +88,24 @@ class MatchTests(TestCase):
         """
 
         class Human(Node):
-            age = Props.Integer()
+            admin = Props.Boolean()
+            dob = Props.Date()
+            name = Props.String()
 
-        query = Query().match(Human, Human.age > 21).result(no_exec=True)
+        query = (Query()
+            .match(
+                Human,
+                Human.admin == True,
+                Human.dob > date(1, 2, 3),
+                Human.name @ ['q', 'w', 'e'],
+            )
+            .result(no_exec=True)
+        )
         expected = (
             'MATCH (a:Human)'
-            '\nWHERE a.age > 21'
+            '\nWHERE a.admin = true'
+            '\n  AND a.dob > 34'
+            '\n  AND a.name IN ["q", "w", "e"]'
             '\nRETURN a'
         )
         self.assertEqual(query, expected)
