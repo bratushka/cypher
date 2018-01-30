@@ -1,3 +1,8 @@
+"""
+Custom exceptions for the library.
+"""
+
+
 class BrokenChain(Exception):
     """
     Chain is corrupted.

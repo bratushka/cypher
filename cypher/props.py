@@ -20,10 +20,10 @@ class BaseProp:
     rules: Iterable[Callable] = ()
 
     def __init__(
-        self,
-        *,
-        required: bool=True,
-        default: Any=None,
+            self,
+            *,
+            required: bool = True,
+            default: Any = None,
     ):
         """
         Configure property.
@@ -102,14 +102,28 @@ class BaseProp:
         return value
 
     def _comparison_creator(
-        self,
-        comparison_type: Type[comparisons.Comparison],
-        value: Any,
+            self,
+            comparison_type: Type[comparisons.Comparison],
+            value: Any,
     ) -> Callable:
+        """
+        Creator of the function to generate comparisons.
+
+        :param comparison_type:
+        :param value:
+        :return:
+        """
         def comparison(
-            model_type: Union['Edge', 'Node'],
-            variable: str,
+                model_type: Union['Edge', 'Node'],
+                variable: str,
         ) -> comparisons.Comparison:
+            """
+            Function to generate a comparison object.
+
+            :param model_type: type  of model to compare
+            :param variable: variable used in cypher statement
+            :return: comparison object
+            """
             prop = next(
                 name for name in dir(model_type)
                 if getattr(model_type, name) is self
@@ -143,9 +157,15 @@ class Props:
     Unique class for properties for nodes and edges.
     """
     class Boolean(BaseProp):
+        """
+        Boolean property.
+        """
         types = (bool,)
 
     class Integer(BaseProp):
+        """
+        Integer property.
+        """
         types = (int,)
         rules = (
             lambda x: x < 9223372036854775808,  # Neo4j constraint
@@ -153,6 +173,9 @@ class Props:
         )
 
     class Float(BaseProp):
+        """
+        Float property.
+        """
         types = (int, float)
 
         @staticmethod
@@ -166,9 +189,17 @@ class Props:
             return float(value)
 
     class String(BaseProp):
+        """
+        String property.
+        """
         types = (str,)
 
     class Date(BaseProp):
+        """
+        Date property. Does not have native support for date objects in Neo4j,
+        so converted to integer when saved to DB. In Python datetime.date is
+        used.
+        """
         types = (date, datetime)
 
         @staticmethod
@@ -205,6 +236,11 @@ class Props:
             return date.fromordinal(value)
 
     class DateTime(BaseProp):
+        """
+        Datetime property. Does not have native support for datetime objects in
+        Neo4j, so converted to timestamp when saved to DB. In Python
+        datetime.date is used.
+        """
         types = (date, datetime)
 
         @staticmethod

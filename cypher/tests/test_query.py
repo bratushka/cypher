@@ -18,6 +18,9 @@ class MatchTests(TestCase):
         The most simple `match` scenario.
         """
         class Human(Node):
+            """
+            Example of Node.
+            """
             pass
 
         query = Query().match(Human).result(no_exec=True)
@@ -32,6 +35,9 @@ class MatchTests(TestCase):
         Match by class + add condition by instance.
         """
         class Human(Node):
+            """
+            Example of Node.
+            """
             pass
 
         human = Human(uid='human_uid')
@@ -49,9 +55,15 @@ class MatchTests(TestCase):
         Combination of 2 most simple `match` scenarios.
         """
         class Human(Node):
+            """
+            Example of Node.
+            """
             pass
 
         class Animal(Node):
+            """
+            Example of Node.
+            """
             pass
 
         query = Query().match(Human).match(Animal).result(no_exec=True)
@@ -66,19 +78,28 @@ class MatchTests(TestCase):
         """
         Combination of matching by class and instance.
         """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
         class Human(Node):
+            """
+            Example of Node.
+            """
             pass
 
         class Animal(Node):
+            """
+            Example of Node.
+            """
             pass
 
         human = Human(uid='human_uid')
         query = Query().match(human).match(Animal).result(no_exec=True)
         expected = (
-            'MATCH (a:Human)'
-            '\nWHERE a.uid = "human_uid"'
-            '\nMATCH (b:Animal)'
-            '\nRETURN a, b'
+            'MATCH (a:Human)\n'
+            'WHERE a.uid = "human_uid"\n'
+            'MATCH (b:Animal)\n'
+            'RETURN a, b'
         )
         self.assertEqual(query, expected)
 
@@ -86,26 +107,32 @@ class MatchTests(TestCase):
         """
         Add a `where` to the most simple `match` scenario.
         """
-
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
         class Human(Node):
+            """
+            Example of Node.
+            """
             admin = Props.Boolean()
             dob = Props.Date()
             name = Props.String()
 
-        query = (Query()
+        query = Query()\
             .match(
                 Human,
+                # pylint: disable=singleton-comparison
                 Human.admin == True,
+                # pylint: enable=singleton-comparison
                 Human.dob > date(1, 2, 3),
                 Human.name @ ['q', 'w', 'e'],
-            )
+            )\
             .result(no_exec=True)
-        )
         expected = (
-            'MATCH (a:Human)'
-            '\nWHERE a.admin = true'
-            '\n  AND a.dob > 34'
-            '\n  AND a.name IN ["q", "w", "e"]'
-            '\nRETURN a'
+            'MATCH (a:Human)\n'
+            'WHERE a.admin = true\n'
+            '  AND a.dob > 34\n'
+            '  AND a.name IN ["q", "w", "e"]\n'
+            'RETURN a'
         )
         self.assertEqual(query, expected)

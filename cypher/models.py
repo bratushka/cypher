@@ -1,20 +1,22 @@
 """
 Objects representing the cypher nodes and edges.
 """
-import abc
 import uuid
 from typing import Mapping
 
 from .props import BaseProp, Props
 
 
-class Model(abc.ABC):
+class Model:
     """
     Common logic for Node and Edge.
     """
     uid = Props.String()
 
     class Meta:
+        """
+        Meta data for the model.
+        """
         unique_together = ()
         validations = ()
         abstract = True

@@ -18,6 +18,7 @@ before_script:
 
 script:
   - docker exec -it cypher nosetests --with-coverage
+  - docker exec -it cypher pylint cypher/
 
 after_success:
-  - docker exec -it cypher codecov --token=6d3f88a3-9f94-4ae2-86c7-de1a314e3b18
+  - docker exec -it cypher codecov --token=${CODECOV_TOKEN}

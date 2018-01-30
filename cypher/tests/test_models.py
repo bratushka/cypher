@@ -16,6 +16,9 @@ class ModelTests(TestCase):
         Test the model instantiation.
         """
         class SomeModel(Model):
+            """
+            Synthetic model type.
+            """
             boolean = Props.Boolean(required=False)
             string = Props.String()
             partial = Props.Float(default=2)

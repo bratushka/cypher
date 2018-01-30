@@ -1,3 +1,6 @@
+"""
+Configuration file.
+"""
 from typing import Mapping
 
 from neo4j.v1 import GraphDatabase
@@ -46,14 +49,25 @@ class Config:
     testing = False
 
     def __init__(self):
+        """
+        Should not be instantiated.
+        """
         raise NoInitiation
 
     @classmethod
     def set_databases(cls, databases: Mapping[str, Mapping[str, str]]):
+        """
+        Set databases to the config.
+
+        :param databases: a dictionary with DB information.
+        """
         cls.databases = {}
         for key, value in databases.items():
             cls.databases[key] = DB(**value)
 
     @classmethod
     def set_testing(cls, value: bool):
+        """
+        Set testing mode.
+        """
         cls.testing = value

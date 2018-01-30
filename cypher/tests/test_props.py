@@ -16,9 +16,15 @@ class BasePropsTests(TestCase):
         Validation should not allow assigning values of wrong types.
         """
         class SomeValue:
+            """
+            Synthetic type.
+            """
             pass
 
         class SomeProp(BaseProp):
+            """
+            Example of Prop.
+            """
             types = (SomeValue,)
 
         with self.assertRaises(TypeError):
@@ -31,6 +37,9 @@ class BasePropsTests(TestCase):
         rules.
         """
         class SomeProp(BaseProp):
+            """
+            Example of Prop.
+            """
             types = (int,)
             rules = (lambda x: x < 0,)
 
@@ -43,6 +52,9 @@ class BasePropsTests(TestCase):
         In simple cases `normalize` should return the same value.
         """
         class SomeProp(BaseProp):
+            """
+            Example of Prop.
+            """
             pass
 
         values = [True, 'string']
@@ -54,6 +66,9 @@ class BasePropsTests(TestCase):
         In simple cases `to_cypher_value` should return the same value.
         """
         class SomeProp(BaseProp):
+            """
+            Example of Prop.
+            """
             pass
 
         values = [True, 1, 1., 'str"ing']
@@ -66,6 +81,9 @@ class BasePropsTests(TestCase):
         In simple cases `to_python_value` should return the same value.
         """
         class SomeProp(BaseProp):
+            """
+            Example of Prop.
+            """
             pass
 
         values = [True, 1, 1., 'string']
@@ -83,9 +101,9 @@ class BooleanTests(TestCase):
         """
         Props.Boolean.validate(True)
 
-        for t in (int, float, str):
+        for cls in (int, float, str):
             with self.assertRaises(TypeError):
-                Props.Boolean.validate(t(True))
+                Props.Boolean.validate(cls(True))
 
 
 class IntegerTests(TestCase):
@@ -98,9 +116,9 @@ class IntegerTests(TestCase):
         """
         Props.Integer.validate(1)
 
-        for t in (float, str):
+        for cls in (float, str):
             with self.assertRaises(TypeError):
-                Props.Integer.validate(t(1))
+                Props.Integer.validate(cls(1))
 
     def test_rules(self):
         """
@@ -150,9 +168,9 @@ class StringTests(TestCase):
         """
         Props.String.validate('String value')
 
-        for t in (int, float, bool):
+        for cls in (int, float, bool):
             with self.assertRaises(TypeError):
-                Props.String.validate(t('1'))
+                Props.String.validate(cls('1'))
 
 
 class DateTests(TestCase):
@@ -166,9 +184,9 @@ class DateTests(TestCase):
         Props.Date.validate(date(2000, 1, 1))
         Props.Date.validate(datetime(2000, 1, 1, 1, 1, 1))
 
-        for t in (int, float, bool):
+        for cls in (int, float, bool):
             with self.assertRaises(TypeError):
-                Props.String.validate(t('1'))
+                Props.String.validate(cls('1'))
 
     def test_normalize(self):
         """
@@ -212,9 +230,9 @@ class DateTimeTests(TestCase):
         Props.DateTime.validate(date(2000, 1, 1))
         Props.DateTime.validate(datetime(2000, 1, 1, 1, 1, 1))
 
-        for t in (int, float, bool):
+        for cls in (int, float, bool):
             with self.assertRaises(TypeError):
-                Props.String.validate(t('1'))
+                Props.String.validate(cls('1'))
 
     def test_normalize(self):
         """

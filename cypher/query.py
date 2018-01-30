@@ -1,3 +1,6 @@
+"""
+Cypher query builder.
+"""
 import enum
 import itertools
 import string
@@ -13,9 +16,7 @@ from typing import (
 )
 
 from .comparisons import Comparison, Equal
-from .exceptions import BrokenChain
 from .models import Edge, Model, Node
-from .props import BaseProp
 
 
 ModelInstance = Union[
@@ -54,41 +55,74 @@ def generate_variables() -> Generator[str, None, None]:
 
 
 class Direction(enum.Enum):
+    """
+    Directions of edges in cypher patterns.
+    """
     LEFT = enum.auto()
     RIGHT = enum.auto()
 
 
 class Chain:
+    """
+    Base class for all chains.
+    """
     def __init__(
-        self,
-        model_by_var: MutableMapping[str, Model],
-        var_by_model: MutableMapping[Model, str],
+            self,
+            model_by_var: MutableMapping[str, Model],
+            var_by_model: MutableMapping[Model, str],
     ):
+        """
+        :param model_by_var: dictionary with models as keys
+        :param var_by_model: dictionary with variables as keys
+        """
         self.model_by_var = model_by_var
         self.var_by_model = var_by_model
 
-    def stringify(self):
+    def stringify(self) -> str:
+        """
+        :return: chain as string for cypher query
+        """
         raise NotImplementedError
 
 
 class MatchingChain(Chain):
+    """
+    Matching chain for query.
+    """
     def __init__(
-        self,
-        model_by_var: MutableMapping[str, Model],
-        var_by_model: MutableMapping[Model, str],
+            self,
+            model_by_var: MutableMapping[str, Model],
+            var_by_model: MutableMapping[Model, str],
     ):
+        """
+        :param model_by_var: dictionary with models as keys
+        :param var_by_model: dictionary with variables as keys
+        """
         super().__init__(model_by_var, var_by_model)
-        self.comparisons = []
-        self.models = []
-        self.directions = []
+        self.comparisons: List[Comparison] = []
+        self.models: List[ModelType] = []
+        self.directions: List[Direction] = []
 
     def add_node(self, node: Type[Node]):
+        """
+        Add node to pattern.
+
+        :param node: node to add
+        """
         self.models.append(node)
 
     def add_comparison(self, comparison: Comparison):
+        """
+        Add `WHERE` condition.
+
+        :param comparison: Comparison object
+        """
         self.comparisons.append(comparison)
 
     def stringify(self) -> str:
+        """
+        :return: chain as part of cypher query
+        """
         pattern = ['({})']
 
         for i in range(len(self.models[1::2])):
@@ -104,6 +138,7 @@ class MatchingChain(Chain):
 
         if self.comparisons:
             result += '\nWHERE ' + '\n  AND '.join(
+                # pylint: disable=no-member
                 condition.stringify() for condition in self.comparisons
             )
 
@@ -123,6 +158,9 @@ class Query:
     Cypher query builder.
     """
     def __init__(self):
+        """
+        Instantiate a new query object.
+        """
         self.model_by_var: MutableMapping[str, Model] = {}
         self.var_by_model: MutableMapping[Model, str] = {}
         self.return_order = []
@@ -184,11 +222,11 @@ class Query:
         return self
 
     def connected_through(
-        self,
-        edge: EdgeUnit,
-        *where: Comparison,
-        min_connections: int=1,
-        max_connections: int=1,
+            self,
+            edge: EdgeUnit,
+            *where: Comparison,
+            min_connections: int = 1,
+            max_connections: int = 1,
     ) -> 'Query':
         """
         Add an edge to the cypher query.
@@ -201,6 +239,7 @@ class Query:
         """
         raise NotImplementedError
 
+    # pylint: disable=invalid-name
     def to(self, node: NodeUnit, *where: Comparison) -> 'Query':
         """
         Add the right node to the `-[]->` connection in the cypher query.
@@ -211,6 +250,7 @@ class Query:
         """
         raise NotImplementedError
 
+    # pylint: disable=invalid-name
     def by(self, node: NodeUnit, *where: Comparison) -> 'Query':
         """
         Add the right node to the `<-[]-` connection in the cypher query.
@@ -241,24 +281,24 @@ class Query:
         raise NotImplementedError
 
     def result(
-        self,
-        *variables: str,
-        distinct: bool=False,
-        limit: int=None,
-        skip: int=None,
-        order_by: str=None,
-        transaction: None=None,  # should be with __enter__ and __exit__
-        no_exec: bool=False,
+            self,
+            # *variables: str,
+            # distinct: bool = False,
+            # limit: int = None,
+            # skip: int = None,
+            # order_by: str = None,
+            # transaction: None = None,  # should be with __enter__ and __exit__
+            no_exec: bool = False,
     ) -> Iterable:
         """
         Execute the query and map the results.
-        
-        :param variables: data to return
-        :param distinct: add `DISTINCT` to the query
-        :param limit: limit the number of results
-        :param skip: skip a number of results
-        :param order_by: add ordering
-        :param transaction: transaction in which to perform the query
+
+        # :param variables: data to return
+        # :param distinct: add `DISTINCT` to the query
+        # :param limit: limit the number of results
+        # :param skip: skip a number of results
+        # :param order_by: add ordering
+        # :param transaction: transaction in which to perform the query
         :param no_exec: return query without hitting the database
         :return: result of the query mapped by appropriate types
         """

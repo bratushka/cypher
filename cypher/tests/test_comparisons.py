@@ -18,9 +18,15 @@ class ComparisonTests(TestCase):
         An equality should be stringified correctly.
         """
         class Frobnicates(Comparison):
+            """
+            Example of comparison.
+            """
             operator = 'FROBNICATES'
 
         class Person(Node):
+            """
+            Example of Node.
+            """
             age = Props.Integer()
             date = Props.Date()
 
