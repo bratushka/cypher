@@ -29,7 +29,8 @@ class Model:
             for prop in dir(cls)
             if isinstance(getattr(self, prop), BaseProp)
         }
-        kwargs.setdefault('uid', uuid.uuid4().hex)
+        if 'uid' not in kwargs:
+            kwargs['uid'] = uuid.uuid4().hex
 
         for name, prop in props.items():
             value = kwargs.get(name, prop.default)
@@ -46,9 +47,6 @@ class Model:
                     .format(cls.__name__, name)
                 )
                 raise ValueError(error_text)
-
-    def __hash__(self):
-        return id(self)
 
 
 class Node(Model):

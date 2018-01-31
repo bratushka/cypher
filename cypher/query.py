@@ -10,6 +10,8 @@ from typing import (
     Iterable,
     List,
     MutableMapping,
+    NamedTuple,
+    Optional,
     Tuple,
     Type,
     Union,
@@ -19,28 +21,35 @@ from .comparisons import Comparison, Equal
 from .models import Edge, Model, Node
 
 
-ModelInstance = Union[
-    Union[Edge, Node],
-    Tuple[Union[Edge, Node], str],
-]
-ModelUnit = Union[
-    ModelInstance,
-    Tuple[Model, str],
-    Tuple[Type[Model], str],
-]
-EdgeUnit = Union[
-    Edge,
-    Type[Edge],
-    Tuple[Edge, str],
-    Tuple[Type[Edge], str],
-]
-NodeUnit = Union[
-    Node,
-    Type[Node],
-    Tuple[Node, str],
-    Tuple[Type[Node], str],
-]
+# User | user
+NodeUnit = Union[Node, Type[Node]]
+# User | (User, 'a') | user | (user, 'a')
+NodeUnitOrTuple = Union[NodeUnit, Tuple[NodeUnit, str]]
+# Knows | knows
+EdgeUnit = Union[Edge, Type[Edge]]
+# Knows | (Knows, 'a') | knows | (knows, 'a')
+EdgeUnitOrTuple = Union[EdgeUnit, Tuple[EdgeUnit, str]]
+# user | knows
+ModelInstance = Union[Edge, Node]
+# User | Knows
 ModelType = Type[Union[Edge, Node]]
+# user | (user, 'a') | knows | (knows, 'a')
+InstanceOrTuple = Union[ModelInstance, Tuple[ModelInstance, str]]
+# User | (User, 'a') | Knows | (Knows, 'a')
+TypeOrTuple = Union[ModelType, Tuple[ModelType, str]]
+# user | (user, 'a') | knows | (knows, 'a') | User | (User, 'a') | Knows | ...
+UnitOrTuple = Union[InstanceOrTuple, TypeOrTuple]
+
+
+class ModelDetails(NamedTuple):
+    """
+    Organized details of a UnitOrTuple.
+    """
+    model: ModelType
+    var: str
+    instance: Optional[ModelInstance]
+    start: Optional[str]
+    end: Optional[str]
 
 
 def generate_variables() -> Generator[str, None, None]:
@@ -168,25 +177,50 @@ class Query:
         self.generator = generate_variables()
         self.model: ModelType = None
 
-    def create(self, *instances: ModelInstance) -> 'Query':
+    def _get_details(self, data: UnitOrTuple) -> ModelDetails:
         """
-        Schedule models for creation.
-
-        :param instances: models to create
-        :return: self
+        Convert a UnitOrTuple into ModelDetails.
         """
-        raise NotImplementedError
+        if isinstance(data, tuple):
+            instance_or_type, variable = (data[0], '_' + data[1])
+        else:
+            instance_or_type, variable = data, next(self.generator)
 
-    def update(self, *models: ModelInstance) -> 'Query':
-        """
-        Schedule models for update.
+        if isinstance(instance_or_type, (Node, Edge)):
+            instance = instance_or_type
+            model = type(instance_or_type)
+        else:
+            instance = None
+            model = instance_or_type
 
-        :param models: models to update
-        :return: self
-        """
-        raise NotImplementedError
+        if isinstance(instance, Edge):
+            raise NotImplementedError
+        else:
+            start = None
+            end = None
 
-    def match(self, node: NodeUnit, *where: Callable) -> 'Query':
+        # pylint: disable=too-many-function-args
+        return ModelDetails(model, variable, instance, start, end)
+
+    # def create(self, *instances: ModelInstance) -> 'Query':
+    #     """
+    #     Schedule models for creation.
+    #
+    #     :param instances: models to create
+    #     :return: self
+    #     """
+    #     raise NotImplementedError
+    #
+    # def update(self, *models: ModelInstance) -> 'Query':
+    #     """
+    #     Schedule models for update.
+    #
+    #     :param models: models to update
+    #     :return: self
+    #     """
+    #     raise NotImplementedError
+
+    def match(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
         """
         Set the starting node to the cypher `MATCH` query.
 
@@ -197,33 +231,25 @@ class Query:
         chain = MatchingChain(self.model_by_var, self.var_by_model)
         self.chains.append(chain)
 
-        # @TODO: export to a separate method everything from here...
-        if isinstance(node, tuple):
-            variable = '_' + node[1]
-            node = node[0]
-        else:
-            variable = next(self.generator)
-
-        if isinstance(node, Node):
-            uid = node.uid
-            node = type(node)
-            chain.add_comparison(Equal(node, variable, 'uid', uid))
-        chain.add_node(node)
-        # ... to here
-        self.model = node
+        details = self._get_details(node)
+        chain.add_node(details.model)
+        self.model = details.model
+        if details.instance:
+            uid = details.instance.uid
+            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
 
         for condition in where:
-            chain.add_comparison(condition(self.model, variable))
+            chain.add_comparison(condition(self.model, details.var))
 
-        self.model_by_var[variable] = node
-        self.var_by_model[node] = variable
-        self.return_order.append(variable)
+        self.model_by_var[details.var] = details.model
+        self.var_by_model[details.model] = details.var
+        self.return_order.append(details.var)
 
         return self
 
     def connected_through(
             self,
-            edge: EdgeUnit,
+            edge: EdgeUnitOrTuple,
             *where: Comparison,
             min_connections: int = 1,
             max_connections: int = 1,
@@ -240,7 +266,7 @@ class Query:
         raise NotImplementedError
 
     # pylint: disable=invalid-name
-    def to(self, node: NodeUnit, *where: Comparison) -> 'Query':
+    def to(self, node: NodeUnitOrTuple, *where: Comparison) -> 'Query':
         """
         Add the right node to the `-[]->` connection in the cypher query.
 
@@ -251,7 +277,7 @@ class Query:
         raise NotImplementedError
 
     # pylint: disable=invalid-name
-    def by(self, node: NodeUnit, *where: Comparison) -> 'Query':
+    def by(self, node: NodeUnitOrTuple, *where: Comparison) -> 'Query':
         """
         Add the right node to the `<-[]-` connection in the cypher query.
 

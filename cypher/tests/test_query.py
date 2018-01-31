@@ -94,7 +94,10 @@ class MatchTests(TestCase):
             pass
 
         human = Human(uid='human_uid')
-        query = Query().match(human).match(Animal).result(no_exec=True)
+        query = Query()\
+            .match(human)\
+            .match(Animal)\
+            .result(no_exec=True)
         expected = (
             'MATCH (a:Human)\n'
             'WHERE a.uid = "human_uid"\n'
