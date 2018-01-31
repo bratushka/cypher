@@ -79,4 +79,7 @@ class ModelTests(TestCase):
         self.assertEqual(instance.props, {'name': 'John', 'age': 34})
 
         instance.props['is_admin'] = True
-        self.assertTrue(instance.props['is_admin'])
+        self.assertEqual(
+            instance.props,
+            {'name': 'John', 'age': 34, 'is_admin': True},
+        )

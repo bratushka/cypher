@@ -25,8 +25,8 @@ class MatchTests(TestCase):
 
         query = Query().match(Human).result(no_exec=True)
         expected = (
-            'MATCH (a:Human)'
-            '\nRETURN a'
+            'MATCH (_a:Human)\n'
+            'RETURN _a'
         )
         self.assertEqual(query, expected)
 
@@ -44,9 +44,9 @@ class MatchTests(TestCase):
 
         query = Query().match(human).result(no_exec=True)
         expected = (
-            'MATCH (a:Human)'
-            '\nWHERE a.uid = "human_uid"'
-            '\nRETURN a'
+            'MATCH (_a:Human)\n'
+            'WHERE _a.uid = "human_uid"\n'
+            'RETURN _a'
         )
         self.assertEqual(query, expected)
 
@@ -68,9 +68,9 @@ class MatchTests(TestCase):
 
         query = Query().match(Human).match(Animal).result(no_exec=True)
         expected = (
-            'MATCH (a:Human)'
-            '\nMATCH (b:Animal)'
-            '\nRETURN a, b'
+            'MATCH (_a:Human)\n'
+            'MATCH (_b:Animal)\n'
+            'RETURN _a, _b'
         )
         self.assertEqual(query, expected)
 
@@ -99,10 +99,10 @@ class MatchTests(TestCase):
             .match(Animal)\
             .result(no_exec=True)
         expected = (
-            'MATCH (a:Human)\n'
-            'WHERE a.uid = "human_uid"\n'
-            'MATCH (b:Animal)\n'
-            'RETURN a, b'
+            'MATCH (_a:Human)\n'
+            'WHERE _a.uid = "human_uid"\n'
+            'MATCH (_b:Animal)\n'
+            'RETURN _a, _b'
         )
         self.assertEqual(query, expected)
 
@@ -132,10 +132,10 @@ class MatchTests(TestCase):
             )\
             .result(no_exec=True)
         expected = (
-            'MATCH (a:Human)\n'
-            'WHERE a.admin = true\n'
-            '  AND a.dob > 34\n'
-            '  AND a.name IN ["q", "w", "e"]\n'
-            'RETURN a'
+            'MATCH (_a:Human)\n'
+            'WHERE _a.admin = true\n'
+            '  AND _a.dob > 34\n'
+            '  AND _a.name IN ["q", "w", "e"]\n'
+            'RETURN _a'
         )
         self.assertEqual(query, expected)

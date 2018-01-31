@@ -45,22 +45,34 @@ class ModelDetails(NamedTuple):
     """
     Organized details of a UnitOrTuple.
     """
-    model: ModelType
     var: str
+    model: Optional[ModelType]
     instance: Optional[ModelInstance]
     start: Optional[str]
     end: Optional[str]
 
+    def get_labels(self) -> Tuple[str, ...]:
+        """
+        :return: sorted tuple of labels
+        """
+        if self.instance:
+            return tuple(sorted(self.instance.labels))
+
+        if self.model:
+            return self.model.__name__,
+
+        return ()
+
 
 def generate_variables() -> Generator[str, None, None]:
     """
-    Generate variables: "a", "b", ..., "z", "aa", "ab", ...
+    Generate variables: "_a", "_b", ..., "_z", "_aa", "_ab", ...
 
     :return: generator of variables
     """
     for i in itertools.count(1):
         for letters in itertools.product(string.ascii_lowercase, repeat=i):
-            yield ''.join(letters)
+            yield '_' + ''.join(letters)
 
 
 class Direction(enum.Enum):
@@ -77,15 +89,13 @@ class Chain:
     """
     def __init__(
             self,
-            model_by_var: MutableMapping[str, ModelType],
-            var_by_model: MutableMapping[ModelType, str],
+            model_details: MutableMapping[str, ModelType],
     ):
         """
         :param model_by_var: dictionary with models as keys
         :param var_by_model: dictionary with variables as keys
         """
-        self.model_by_var = model_by_var
-        self.var_by_model = var_by_model
+        self.model_details = model_details
 
     def stringify(self) -> str:
         """
@@ -100,25 +110,23 @@ class MatchingChain(Chain):
     """
     def __init__(
             self,
-            model_by_var: MutableMapping[str, ModelType],
-            var_by_model: MutableMapping[ModelType, str],
+            model_details: MutableMapping[str, ModelType],
     ):
         """
-        :param model_by_var: dictionary with models as keys
-        :param var_by_model: dictionary with variables as keys
+        :param model_details: dictionary with variables as keys
         """
-        super().__init__(model_by_var, var_by_model)
+        super().__init__(model_details)
         self.comparisons: List[Comparison] = []
-        self.models: List[ModelType] = []
+        self.models: List[ModelDetails] = []
         self.directions: List[Direction] = []
 
-    def add_node(self, node: Type[Node]):
+    def add_node(self, details: ModelDetails):
         """
         Add node to pattern.
 
-        :param node: node to add
+        :param details: details of the node to add
         """
-        self.models.append(node)
+        self.models.append(details)
 
     def add_comparison(self, comparison: Comparison):
         """
@@ -141,8 +149,8 @@ class MatchingChain(Chain):
             ))
 
         result = 'MATCH ' + ''.join(pattern).format(*(
-            ''.join((self.var_by_model[model], ':', model.__name__))
-            for model in self.models
+            ':'.join((details.var, *details.get_labels()))
+            for details in self.models
         ))
 
         if self.comparisons:
@@ -154,14 +162,6 @@ class MatchingChain(Chain):
         return result
 
 
-# class CreateChain(Chain):
-#     pass
-#
-#
-# class UpdateChain(Chain):
-#     pass
-
-
 class Query:
     """
     Cypher query builder.
@@ -170,19 +170,17 @@ class Query:
         """
         Instantiate a new query object.
         """
-        self.model_by_var: MutableMapping[str, ModelType] = {}
-        self.var_by_model: MutableMapping[ModelType, str] = {}
+        self.model_details: MutableMapping[str, ModelType] = {}
         self.return_order = []
         self.chains: List[Chain] = []
         self.generator = generate_variables()
-        self.model: ModelType = None
 
     def _get_details(self, data: UnitOrTuple) -> ModelDetails:
         """
         Convert a UnitOrTuple into ModelDetails.
         """
         if isinstance(data, tuple):
-            instance_or_type, variable = (data[0], '_' + data[1])
+            instance_or_type, variable = data
         else:
             instance_or_type, variable = data, next(self.generator)
 
@@ -200,25 +198,7 @@ class Query:
             end = None
 
         # pylint: disable=too-many-function-args
-        return ModelDetails(model, variable, instance, start, end)
-
-    # def create(self, *instances: ModelInstance) -> 'Query':
-    #     """
-    #     Schedule models for creation.
-    #
-    #     :param instances: models to create
-    #     :return: self
-    #     """
-    #     raise NotImplementedError
-    #
-    # def update(self, *models: ModelInstance) -> 'Query':
-    #     """
-    #     Schedule models for update.
-    #
-    #     :param models: models to update
-    #     :return: self
-    #     """
-    #     raise NotImplementedError
+        return ModelDetails(variable, model, instance, start, end)
 
     def match(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
         """
@@ -228,83 +208,23 @@ class Query:
         :param where: conditions for the `node` to match
         :return: self
         """
-        chain = MatchingChain(self.model_by_var, self.var_by_model)
+        chain = MatchingChain(self.model_details)
         self.chains.append(chain)
 
         details = self._get_details(node)
-        chain.add_node(details.model)
-        self.model = details.model
+        chain.add_node(details)
+
         if details.instance:
             uid = details.instance.uid
             chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
 
         for condition in where:
-            chain.add_comparison(condition(self.model, details.var))
+            chain.add_comparison(condition(details.model, details.var))
 
-        self.model_by_var[details.var] = details.model
-        self.var_by_model[details.model] = details.var
+        self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
         return self
-
-    def connected_through(
-            self,
-            edge: EdgeUnitOrTuple,
-            *where: Comparison,
-            min_connections: int = 1,
-            max_connections: int = 1,
-    ) -> 'Query':
-        """
-        Add an edge to the cypher query.
-
-        :param edge: edge to match
-        :param where: conditions for the `edge` to match
-        :param min_connections: minimum connection length
-        :param max_connections: maximum connection length
-        :return: self
-        """
-        raise NotImplementedError
-
-    # pylint: disable=invalid-name
-    def to(self, node: NodeUnitOrTuple, *where: Comparison) -> 'Query':
-        """
-        Add the right node to the `-[]->` connection in the cypher query.
-
-        :param node: node to match
-        :param where: conditions for the `node` to match
-        :return: self
-        """
-        raise NotImplementedError
-
-    # pylint: disable=invalid-name
-    def by(self, node: NodeUnitOrTuple, *where: Comparison) -> 'Query':
-        """
-        Add the right node to the `<-[]-` connection in the cypher query.
-
-        :param node: node to match
-        :param where: conditions for the `node` to match
-        :return: self
-        """
-        raise NotImplementedError
-
-    def where(self, *conditions: Comparison) -> 'Query':
-        """
-        Add arbitrary conditions.
-
-        :param conditions: conditions to meet
-        :return: self
-        """
-        raise NotImplementedError
-
-    def delete(self, *variables: str) -> dict:
-        """
-        Schedule the models represented by the listed variables for deletion.
-
-        :param variables: models to delete
-        :return: self
-        """
-        # return tx.run(query).summary().counters
-        raise NotImplementedError
 
     def result(
             self,
