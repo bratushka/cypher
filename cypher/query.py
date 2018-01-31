@@ -18,7 +18,7 @@ from typing import (
 )
 
 from .comparisons import Comparison, Equal
-from .models import Edge, Model, Node
+from .models import Edge, Node
 
 
 # User | user
@@ -77,8 +77,8 @@ class Chain:
     """
     def __init__(
             self,
-            model_by_var: MutableMapping[str, Model],
-            var_by_model: MutableMapping[Model, str],
+            model_by_var: MutableMapping[str, ModelType],
+            var_by_model: MutableMapping[ModelType, str],
     ):
         """
         :param model_by_var: dictionary with models as keys
@@ -100,8 +100,8 @@ class MatchingChain(Chain):
     """
     def __init__(
             self,
-            model_by_var: MutableMapping[str, Model],
-            var_by_model: MutableMapping[Model, str],
+            model_by_var: MutableMapping[str, ModelType],
+            var_by_model: MutableMapping[ModelType, str],
     ):
         """
         :param model_by_var: dictionary with models as keys
@@ -170,8 +170,8 @@ class Query:
         """
         Instantiate a new query object.
         """
-        self.model_by_var: MutableMapping[str, Model] = {}
-        self.var_by_model: MutableMapping[Model, str] = {}
+        self.model_by_var: MutableMapping[str, ModelType] = {}
+        self.var_by_model: MutableMapping[ModelType, str] = {}
         self.return_order = []
         self.chains: List[Chain] = []
         self.generator = generate_variables()
