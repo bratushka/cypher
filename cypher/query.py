@@ -22,12 +22,12 @@ from .models import Edge, Node
 
 
 # User | user
-NodeUnit = Union[Node, Type[Node]]
-# User | (User, 'a') | user | (user, 'a')
+NodeUnit = Union[Node, Type[Node], None]
+# User | (User, 'a') | user | (user, 'a') | None | (None, 'a')
 NodeUnitOrTuple = Union[NodeUnit, Tuple[NodeUnit, str]]
 # Knows | knows
-EdgeUnit = Union[Edge, Type[Edge]]
-# Knows | (Knows, 'a') | knows | (knows, 'a')
+EdgeUnit = Union[Edge, Type[Edge], None]
+# Knows | (Knows, 'a') | knows | (knows, 'a') | None | (None, 'a')
 EdgeUnitOrTuple = Union[EdgeUnit, Tuple[EdgeUnit, str]]
 # user | knows
 ModelInstance = Union[Edge, Node]
@@ -92,8 +92,7 @@ class Chain:
             model_details: MutableMapping[str, ModelType],
     ):
         """
-        :param model_by_var: dictionary with models as keys
-        :param var_by_model: dictionary with variables as keys
+        :param model_details: dictionary with variables as keys
         """
         self.model_details = model_details
 
