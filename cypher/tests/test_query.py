@@ -139,3 +139,14 @@ class MatchTests(TestCase):
             'RETURN _a'
         )
         self.assertEqual(query, expected)
+
+    def test_match_by_none(self):
+        """
+        Match all the nodes.
+        """
+        query = Query().match(None).result(no_exec=True)
+        expected = (
+            'MATCH (_a)\n'
+            'RETURN _a'
+        )
+        self.assertEqual(query, expected)
