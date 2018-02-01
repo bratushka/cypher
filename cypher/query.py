@@ -50,6 +50,7 @@ class ModelDetails(NamedTuple):
     instance: Optional[ModelInstance]
     start: Optional[str]
     end: Optional[str]
+    conn: Optional[Tuple[Optional[int], Optional[int]]]
 
     def get_labels(self) -> Tuple[str, ...]:
         """
@@ -186,17 +187,32 @@ class MatchingChain(Chain):
             details = self.models[0]
             lines = ['MATCH ({})'.format(details.get_var_and_labels())]
         else:
-            pattern = 'MATCH {path} = ({start}){left}-[{edge}]-{right}({end})'
+            pattern = (
+                'MATCH {path} = '
+                '({start}){left}-[{edge}{conn}]-{right}({end})'
+            )
             lines = []
             for i in range(len(self.models) // 2):
                 model = self.models[i * 2]
                 start = model.get_var_and_labels() if i == 0 else model.var
 
+                model = self.models[i * 2 + 1]
+                if model.conn:
+                    edge = ':'.join(('', *model.get_labels()))
+                    conn = ' *{}..{}'.format(*(
+                        str(num) if num is not None else ''
+                        for num in model.conn
+                    ))
+                else:
+                    edge = model.get_var_and_labels()
+                    conn = ''
+
                 lines.append(pattern.format(
                     path=self.paths[i],
                     start=start,
                     left='<' if self.directions[i] == Direction.BACK else '',
-                    edge=self.models[i * 2 + 1].get_var_and_labels(),
+                    edge=edge,
+                    conn=conn,
                     right='>' if self.directions[i] == Direction.FRONT else '',
                     end=self.models[i * 2 + 2].get_var_and_labels(),
                 ))
@@ -226,7 +242,11 @@ class Query:
         self.path_generator = generate_paths()
         self.vars_generator = generate_variables()
 
-    def _get_details(self, data: UnitOrTuple) -> ModelDetails:
+    def _get_details(
+            self,
+            data: UnitOrTuple,
+            conn: Optional[Tuple[Optional[int], Optional[int]]] = None,
+    ) -> ModelDetails:
         """
         Convert a UnitOrTuple into ModelDetails.
         """
@@ -249,7 +269,7 @@ class Query:
             end = None
 
         # pylint: disable=too-many-function-args
-        return ModelDetails(variable, model, instance, start, end)
+        return ModelDetails(variable, model, instance, start, end, conn)
 
     def match(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
         """
@@ -281,19 +301,19 @@ class Query:
             self,
             edge: EdgeUnitOrTuple,
             *where: Callable,
-            # conn: Tuple[int, int] = None,
+            conn: Tuple[Optional[int], Optional[int]] = None,
     ) -> 'Query':
         """
         Add a connection to the matching chain.
 
         :param edge: edge to match
         :param where: conditions to meet
-        # :param conn: min connections between nodes
+        :param conn: range of connections between nodes
         :return: self
         """
         chain: MatchingChain = self.chains[-1]
 
-        details = self._get_details(edge)
+        details = self._get_details(edge, conn)
         chain.add_edge(details)
         chain.add_path(next(self.path_generator))
 

@@ -208,27 +208,30 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-    # def test_connected_through_with_connection_length(self):
-    #     """
-    #     Pass `connections` argument to the `connected_through` method.
-    #     """
-    #     class User(Node):
-    #         """
-    #         Example of Node.
-    #         """
-    #
-    #     class Knows(Edge):
-    #         """
-    #         Example of edge.
-    #         """
-    #
-    #     query = Query()\
-    #         .match(User)\
-    #         .connected_through(Knows, conn=(1, 3))\
-    #         .with_(User)\
-    #         .result(no_exec=True)
-    #     expected = (
-    #         'MATCH (_a:User)-[_b:Knows]-(_c:User)\n'
-    #         'RETURN _a, _b, _c'
-    #     )
-    #     self.assertEqual(query, expected)
+    def test_connected_through_with_connection_length(self):
+        """
+        Pass `conn` argument to the `connected_through` method.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        class User(Node):
+            """
+            Example of Node.
+            """
+
+        class Knows(Edge):
+            """
+            Example of edge.
+            """
+
+        query = Query()\
+            .match(User)\
+            .connected_through(Knows, conn=(1, 3))\
+            .with_(User)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a:User)-[:Knows *1..3]-(_c:User)\n'
+            'RETURN _a, _b, _c'
+        )
+        self.assertEqual(query, expected)
