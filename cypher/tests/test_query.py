@@ -162,3 +162,18 @@ class MatchTests(TestCase):
             'RETURN a'
         )
         self.assertEqual(query, expected)
+
+    def test_match_path(self):
+        """
+        Match a path.
+        """
+        query = Query()\
+            .match(None)\
+            .connected_through(None)\
+            .with_(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH (_a)-[_b]-(_c)\n'
+            'RETURN _a, _b, _c'
+        )
+        self.assertEqual(query, expected)

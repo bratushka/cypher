@@ -79,8 +79,9 @@ class Direction(enum.Enum):
     """
     Directions of edges in cypher patterns.
     """
-    LEFT = enum.auto()
-    RIGHT = enum.auto()
+    NONE = enum.auto()
+    BACK = enum.auto()
+    FRONT = enum.auto()
 
 
 class Chain:
@@ -127,6 +128,22 @@ class MatchingChain(Chain):
         """
         self.models.append(details)
 
+    def add_edge(self, details: ModelDetails):
+        """
+        Add edge to pattern.
+
+        :param details: details of the edge to add
+        """
+        self.models.append(details)
+
+    def add_direction(self, direction: Direction):
+        """
+        Add direction to the edge in pattern.
+
+        :param direction: direction of the connection
+        """
+        self.directions.append(direction)
+
     def add_comparison(self, comparison: Comparison):
         """
         Add `WHERE` condition.
@@ -143,8 +160,8 @@ class MatchingChain(Chain):
 
         for i in range(len(self.models[1::2])):
             pattern.append('{}-[{{}}]-{}({{}})'.format(
-                self.directions[i] == Direction.LEFT,
-                self.directions[i] == Direction.RIGHT,
+                '<' if self.directions[i] == Direction.BACK else '',
+                '>' if self.directions[i] == Direction.FRONT else '',
             ))
 
         result = 'MATCH ' + ''.join(pattern).format(*(
@@ -212,6 +229,63 @@ class Query:
 
         details = self._get_details(node)
         chain.add_node(details)
+
+        if details.instance:
+            uid = details.instance.uid
+            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
+
+        for condition in where:
+            chain.add_comparison(condition(details.model, details.var))
+
+        self.model_details[details.var] = details.model
+        self.return_order.append(details.var)
+
+        return self
+
+    def connected_through(
+            self,
+            edge: EdgeUnitOrTuple,
+            *where: Callable,
+            # connections: range = range(1, 2),
+    ) -> 'Query':
+        """
+        Add a connection to the matching chain.
+
+        :param edge: edge to match
+        :param where: conditions to meet
+        # :param connections: range of connections number
+        :return: self
+        """
+        chain: MatchingChain = self.chains[-1]
+
+        details = self._get_details(edge)
+        chain.add_edge(details)
+
+        if details.instance:
+            uid = details.instance.uid
+            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
+
+        for condition in where:
+            chain.add_comparison(condition(details.model, details.var))
+
+        self.model_details[details.var] = details.model
+        self.return_order.append(details.var)
+
+        return self
+
+    def with_(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
+        """
+        Add a node after a connection to the matching chain.
+
+        :param node: node to add
+        :param where: conditions to meet
+        :return: self
+        """
+        chain: MatchingChain = self.chains[-1]
+
+        details = self._get_details(node)
+        chain.add_edge(details)
+        chain.add_direction(Direction.NONE)
 
         if details.instance:
             uid = details.instance.uid
