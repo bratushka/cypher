@@ -227,7 +227,7 @@ class Query:
 
     def result(
             self,
-            # *variables: str,
+            *variables: str,
             # distinct: bool = False,
             # limit: int = None,
             # skip: int = None,
@@ -247,6 +247,9 @@ class Query:
         :param no_exec: return query without hitting the database
         :return: result of the query mapped by appropriate types
         """
+        if variables:
+            self.return_order = variables
+
         command = '\n'.join((
             *(chain.stringify() for chain in self.chains),
             'RETURN ' + ', '.join(self.return_order),
