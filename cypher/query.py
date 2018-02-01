@@ -63,16 +63,35 @@ class ModelDetails(NamedTuple):
 
         return ()
 
+    def get_var_and_labels(self) -> str:
+        """
+        Get a string ready to be used in cypher pattern.
+        Example: `a:Human:Person`.
+        """
+        return ':'.join((self.var, *self.get_labels()))
+
+
+def generate_paths() -> Generator[str, None, None]:
+    """
+    Generate path variables: "_p1", "_p2", "_p3", ...
+
+    :return: generator of path variables
+    """
+    for i in itertools.count(1):
+        yield '_p' + str(i)
+
 
 def generate_variables() -> Generator[str, None, None]:
     """
     Generate variables: "_a", "_b", ..., "_z", "_aa", "_ab", ...
+    Non of variables should start with "_p".
 
     :return: generator of variables
     """
     for i in itertools.count(1):
         for letters in itertools.product(string.ascii_lowercase, repeat=i):
-            yield '_' + ''.join(letters)
+            if not letters[0] == 'p':
+                yield '_' + ''.join(letters)
 
 
 class Direction(enum.Enum):
@@ -119,6 +138,7 @@ class MatchingChain(Chain):
         self.comparisons: List[Comparison] = []
         self.models: List[ModelDetails] = []
         self.directions: List[Direction] = []
+        self.paths: List[str] = []
 
     def add_node(self, details: ModelDetails):
         """
@@ -135,6 +155,12 @@ class MatchingChain(Chain):
         :param details: details of the edge to add
         """
         self.models.append(details)
+
+    def add_path(self, path: str):
+        """
+        Add path name.
+        """
+        self.paths.append(path)
 
     def add_direction(self, direction: Direction):
         """
@@ -156,18 +182,25 @@ class MatchingChain(Chain):
         """
         :return: chain as part of cypher query
         """
-        pattern = ['({})']
+        if len(self.models) == 1:
+            details = self.models[0]
+            lines = ['MATCH ({})'.format(details.get_var_and_labels())]
+        else:
+            pattern = 'MATCH {path} = ({start}){left}-[{edge}]-{right}({end})'
+            lines = []
+            for i in range(len(self.models) // 2):
+                model = self.models[i * 2]
+                start = model.get_var_and_labels() if i == 0 else model.var
 
-        for i in range(len(self.models[1::2])):
-            pattern.append('{}-[{{}}]-{}({{}})'.format(
-                '<' if self.directions[i] == Direction.BACK else '',
-                '>' if self.directions[i] == Direction.FRONT else '',
-            ))
-
-        result = 'MATCH ' + ''.join(pattern).format(*(
-            ':'.join((details.var, *details.get_labels()))
-            for details in self.models
-        ))
+                lines.append(pattern.format(
+                    path=self.paths[i],
+                    start=start,
+                    left='<' if self.directions[i] == Direction.BACK else '',
+                    edge=self.models[i * 2 + 1].get_var_and_labels(),
+                    right='>' if self.directions[i] == Direction.FRONT else '',
+                    end=self.models[i * 2 + 2].get_var_and_labels(),
+                ))
+        result = '\n'.join(lines)
 
         if self.comparisons:
             result += '\nWHERE ' + '\n  AND '.join(
@@ -189,7 +222,9 @@ class Query:
         self.model_details: MutableMapping[str, ModelType] = {}
         self.return_order = []
         self.chains: List[Chain] = []
-        self.generator = generate_variables()
+
+        self.path_generator = generate_paths()
+        self.vars_generator = generate_variables()
 
     def _get_details(self, data: UnitOrTuple) -> ModelDetails:
         """
@@ -198,7 +233,7 @@ class Query:
         if isinstance(data, tuple):
             instance_or_type, variable = data
         else:
-            instance_or_type, variable = data, next(self.generator)
+            instance_or_type, variable = data, next(self.vars_generator)
 
         if isinstance(instance_or_type, (Node, Edge)):
             instance = instance_or_type
@@ -246,20 +281,21 @@ class Query:
             self,
             edge: EdgeUnitOrTuple,
             *where: Callable,
-            # connections: range = range(1, 2),
+            # conn: Tuple[int, int] = None,
     ) -> 'Query':
         """
         Add a connection to the matching chain.
 
         :param edge: edge to match
         :param where: conditions to meet
-        # :param connections: range of connections number
+        # :param conn: min connections between nodes
         :return: self
         """
         chain: MatchingChain = self.chains[-1]
 
         details = self._get_details(edge)
         chain.add_edge(details)
+        chain.add_path(next(self.path_generator))
 
         if details.instance:
             uid = details.instance.uid

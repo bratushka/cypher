@@ -5,7 +5,7 @@ from datetime import date
 from unittest import TestCase
 
 from ..props import Props
-from ..models import Node
+from ..models import Edge, Node
 from ..query import Query
 
 
@@ -173,7 +173,62 @@ class MatchTests(TestCase):
             .with_(None)\
             .result(no_exec=True)
         expected = (
-            'MATCH (_a)-[_b]-(_c)\n'
+            'MATCH _p1 = (_a)-[_b]-(_c)\n'
             'RETURN _a, _b, _c'
         )
         self.assertEqual(query, expected)
+
+    def test_match_double_path(self):
+        """
+        A matching chain should split into 2 MATCH statements.
+        """
+        class User(Node):
+            """
+            Example of Node.
+            """
+            pass
+
+        class Knows(Edge):
+            """
+            Example of Edge.
+            """
+            pass
+
+        query = Query()\
+            .match(None)\
+            .connected_through(Knows)\
+            .with_(User)\
+            .connected_through(None)\
+            .with_(User)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)-[_b:Knows]-(_c:User)\n'
+            'MATCH _p2 = (_c)-[_d]-(_e:User)\n'
+            'RETURN _a, _b, _c, _d, _e'
+        )
+        self.assertEqual(query, expected)
+
+    # def test_connected_through_with_connection_length(self):
+    #     """
+    #     Pass `connections` argument to the `connected_through` method.
+    #     """
+    #     class User(Node):
+    #         """
+    #         Example of Node.
+    #         """
+    #
+    #     class Knows(Edge):
+    #         """
+    #         Example of edge.
+    #         """
+    #
+    #     query = Query()\
+    #         .match(User)\
+    #         .connected_through(Knows, conn=(1, 3))\
+    #         .with_(User)\
+    #         .result(no_exec=True)
+    #     expected = (
+    #         'MATCH (_a:User)-[_b:Knows]-(_c:User)\n'
+    #         'RETURN _a, _b, _c'
+    #     )
+    #     self.assertEqual(query, expected)
