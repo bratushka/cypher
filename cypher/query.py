@@ -220,7 +220,6 @@ class MatchingChain(Chain):
 
         if self.comparisons:
             result += '\nWHERE ' + '\n  AND '.join(
-                # pylint: disable=no-member
                 condition.stringify() for condition in self.comparisons
             )
 
@@ -271,6 +270,26 @@ class Query:
         # pylint: disable=too-many-function-args
         return ModelDetails(variable, model, instance, start, end, conn)
 
+    def _add_conditions(
+            self,
+            details: ModelDetails,
+            conditions: Iterable[Callable],
+    ):
+        """
+        Add conditions to the matching chain.
+
+        :param details: details of the matching model
+        :param conditions: conditions to meet
+        """
+        chain: MatchingChain = self.chains[-1]
+
+        if details.instance:
+            uid = details.instance.uid
+            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
+
+        for condition in conditions:
+            chain.add_comparison(condition(details.model, details.var))
+
     def match(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
         """
         Set the starting node to the cypher `MATCH` query.
@@ -285,13 +304,7 @@ class Query:
         details = self._get_details(node)
         chain.add_node(details)
 
-        if details.instance:
-            uid = details.instance.uid
-            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
-
-        for condition in where:
-            chain.add_comparison(condition(details.model, details.var))
-
+        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
@@ -317,13 +330,7 @@ class Query:
         chain.add_edge(details)
         chain.add_path(next(self.path_generator))
 
-        if details.instance:
-            uid = details.instance.uid
-            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
-
-        for condition in where:
-            chain.add_comparison(condition(details.model, details.var))
-
+        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
@@ -343,13 +350,7 @@ class Query:
         chain.add_edge(details)
         chain.add_direction(Direction.NONE)
 
-        if details.instance:
-            uid = details.instance.uid
-            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
-
-        for condition in where:
-            chain.add_comparison(condition(details.model, details.var))
-
+        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 

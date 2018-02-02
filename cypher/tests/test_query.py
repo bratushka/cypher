@@ -195,16 +195,16 @@ class MatchTests(TestCase):
             pass
 
         query = Query()\
-            .match(None)\
-            .connected_through(Knows)\
+            .match((None, 'b'))\
+            .connected_through((Knows, 'a'))\
             .with_(User)\
             .connected_through(None)\
             .with_(User)\
             .result(no_exec=True)
         expected = (
-            'MATCH _p1 = (_a)-[_b:Knows]-(_c:User)\n'
-            'MATCH _p2 = (_c)-[_d]-(_e:User)\n'
-            'RETURN _a, _b, _c, _d, _e'
+            'MATCH _p1 = (b)-[a:Knows]-(_a:User)\n'
+            'MATCH _p2 = (_a)-[_b]-(_c:User)\n'
+            'RETURN b, a, _a, _b, _c'
         )
         self.assertEqual(query, expected)
 
@@ -232,6 +232,7 @@ class MatchTests(TestCase):
             .result(no_exec=True)
         expected = (
             'MATCH _p1 = (_a:User)-[:Knows *1..3]-(_c:User)\n'
+            # 'RETURN _a, relationships(_p1) as _b, _c'
             'RETURN _a, _b, _c'
         )
         self.assertEqual(query, expected)
