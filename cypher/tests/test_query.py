@@ -262,7 +262,6 @@ class MatchTests(TestCase):
             .result(no_exec=True)
         expected = (
             'MATCH _p1 = (_a:User)-[:Knows *1..3]-(_c:User)\n'
-            # 'RETURN _a, relationships(_p1) as _b, _c'
-            'RETURN _a, _b, _c'
+            'RETURN _a, relationships(_p1) as _b, _c'
         )
         self.assertEqual(query, expected)

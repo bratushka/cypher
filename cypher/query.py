@@ -4,6 +4,7 @@ Cypher query builder.
 import enum
 import itertools
 import string
+from collections import OrderedDict
 from typing import (
     Callable,
     Generator,
@@ -41,6 +42,38 @@ TypeOrTuple = Union[ModelType, Tuple[ModelType, str]]
 UnitOrTuple = Union[InstanceOrTuple, TypeOrTuple]
 
 
+def not_impl():
+    """
+    Only for dev development.
+
+    :raise: NotImplementedError
+    """
+    raise NotImplementedError('this is still to be developed')
+
+
+def generate_paths() -> Generator[str, None, None]:
+    """
+    Generate path variables: "_p1", "_p2", "_p3", ...
+
+    :return: generator of path variables
+    """
+    for i in itertools.count(1):
+        yield '_p' + str(i)
+
+
+def generate_variables() -> Generator[str, None, None]:
+    """
+    Generate variables: "_a", "_b", ..., "_z", "_aa", "_ab", ...
+    Non of variables should start with "_p".
+
+    :return: generator of variables
+    """
+    for i in itertools.count(1):
+        for letters in itertools.product(string.ascii_lowercase, repeat=i):
+            if not letters[0] == 'p':
+                yield '_' + ''.join(letters)
+
+
 class ModelDetails(NamedTuple):
     """
     Organized details of a UnitOrTuple.
@@ -72,27 +105,12 @@ class ModelDetails(NamedTuple):
         return ':'.join((self.var, *self.get_labels()))
 
 
-def generate_paths() -> Generator[str, None, None]:
+class Outcome(NamedTuple):
     """
-    Generate path variables: "_p1", "_p2", "_p3", ...
-
-    :return: generator of path variables
+    Wrapper for the Query outcome elements.
     """
-    for i in itertools.count(1):
-        yield '_p' + str(i)
-
-
-def generate_variables() -> Generator[str, None, None]:
-    """
-    Generate variables: "_a", "_b", ..., "_z", "_aa", "_ab", ...
-    Non of variables should start with "_p".
-
-    :return: generator of variables
-    """
-    for i in itertools.count(1):
-        for letters in itertools.product(string.ascii_lowercase, repeat=i):
-            if not letters[0] == 'p':
-                yield '_' + ''.join(letters)
+    result: str
+    mapper: Callable
 
 
 class Direction(enum.Enum):
@@ -246,7 +264,7 @@ class Query:
         Instantiate a new query object.
         """
         self.model_details: MutableMapping[str, ModelType] = {}
-        self.return_order = []
+        self.outcome: OrderedDict = OrderedDict()
         self.chains: List[Chain] = []
 
         self.path_generator = generate_paths()
@@ -273,7 +291,9 @@ class Query:
             model = instance_or_type
 
         if isinstance(instance, Edge):
-            raise NotImplementedError
+            start = None
+            end = None
+            not_impl()
         else:
             start = None
             end = None
@@ -297,7 +317,7 @@ class Query:
         chain.add_conditions(details, where)
 
         self.model_details[details.var] = details.model
-        self.return_order.append(details.var)
+        self.outcome[details.var] = Outcome(details.var, not_impl)
 
         return self
 
@@ -318,12 +338,18 @@ class Query:
         chain: MatchingChain = self.chains[-1]
 
         details = self._get_details(edge, conn)
+        path = next(self.path_generator)
         chain.add_edge(details)
-        chain.add_path(next(self.path_generator))
+        chain.add_path(path)
         chain.add_conditions(details, where)
 
         self.model_details[details.var] = details.model
-        self.return_order.append(details.var)
+
+        if conn:
+            result = 'relationships({}) as {}'.format(path, details.var)
+            self.outcome[details.var] = Outcome(result, not_impl)
+        else:
+            self.outcome[details.var] = Outcome(details.var, not_impl)
 
         return self
 
@@ -349,7 +375,7 @@ class Query:
         chain.add_conditions(details, where)
 
         self.model_details[details.var] = details.model
-        self.return_order.append(details.var)
+        self.outcome[details.var] = Outcome(details.var, not_impl)
 
         return self
 
@@ -412,11 +438,13 @@ class Query:
         :return: result of the query mapped by appropriate types
         """
         if variables:
-            self.return_order = variables
+            returns = map(lambda var: self.outcome[var].result, variables)
+        else:
+            returns = map(lambda elem: elem.result, self.outcome.values())
 
         command = '\n'.join((
             *(chain.stringify() for chain in self.chains),
-            'RETURN ' + ', '.join(self.return_order),
+            'RETURN ' + ', '.join(returns),
         ))
 
         if no_exec:
