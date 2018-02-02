@@ -208,6 +208,30 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
+    def test_path_with_edge_instance(self):
+        """
+        Match a path with edge instance instead of edge model.
+        """
+        class Knows(Edge):
+            """
+            Example of Edge.
+            """
+            pass
+
+        instance = Knows(uid='instance_uid')
+        query = Query()\
+            .match(None)\
+            .connected_through(instance)\
+            .to(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)-[_b:Knows]->(_c)\n'
+            'WHERE _b.uid = "instance_uid"\n'
+            'RETURN _a, _b, _c'
+        )
+
+        self.assertEqual(query, expected)
+
     def test_match_double_path(self):
         """
         A matching chain should split into 2 MATCH statements.

@@ -291,9 +291,9 @@ class Query:
             model = instance_or_type
 
         if isinstance(instance, Edge):
+            # This will be changed when it comes to the `create` action.
             start = None
             end = None
-            not_impl()
         else:
             start = None
             end = None
