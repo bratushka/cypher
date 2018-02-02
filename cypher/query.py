@@ -327,10 +327,16 @@ class Query:
 
         return self
 
-    def with_(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
+    def _by_to_with(
+            self,
+            direction: Direction,
+            node: NodeUnitOrTuple,
+            *where: Callable,
+    ) -> 'Query':
         """
-        Add a node after a connection to the matching chain.
+        Common logic for `to`, `by` and `with_` methods.
 
+        :param direction: direction of connection
         :param node: node to add
         :param where: conditions to meet
         :return: self
@@ -339,13 +345,49 @@ class Query:
 
         details = self._get_details(node)
         chain.add_edge(details)
-        chain.add_direction(Direction.NONE)
+        chain.add_direction(direction)
         chain.add_conditions(details, where)
 
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
         return self
+
+    def with_(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
+        """
+        Add a node after connection with no direction to the matching chain.
+
+        :param node: node to add
+        :param where: conditions to meet
+        :return: self
+        """
+        return self._by_to_with(Direction.NONE, node, *where)
+
+    def by(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
+        """
+        Add a node after connection with back direction to the matching chain.
+
+        :param node: node to add
+        :param where: conditions to meet
+        :return: self
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        return self._by_to_with(Direction.BACK, node, *where)
+
+    def to(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
+        """
+        Add a node after connection with front direction to the matching chain.
+
+        :param node: node to add
+        :param where: conditions to meet
+        :return: self
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        return self._by_to_with(Direction.FRONT, node, *where)
 
     def result(
             self,

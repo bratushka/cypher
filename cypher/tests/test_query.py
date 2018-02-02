@@ -163,9 +163,9 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-    def test_match_path(self):
+    def test_match_path_no_direction(self):
         """
-        Match a path.
+        Match a path with front or back direction.
         """
         query = Query()\
             .match(None)\
@@ -174,6 +174,36 @@ class MatchTests(TestCase):
             .result(no_exec=True)
         expected = (
             'MATCH _p1 = (_a)-[_b]-(_c)\n'
+            'RETURN _a, _b, _c'
+        )
+        self.assertEqual(query, expected)
+
+    def test_match_path_back_direction(self):
+        """
+        Match a path with back direction.
+        """
+        query = Query()\
+            .match(None)\
+            .connected_through(None)\
+            .by(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)<-[_b]-(_c)\n'
+            'RETURN _a, _b, _c'
+        )
+        self.assertEqual(query, expected)
+
+    def test_match_path_front_direction(self):
+        """
+        Match a path with front direction.
+        """
+        query = Query()\
+            .match(None)\
+            .connected_through(None)\
+            .to(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)-[_b]->(_c)\n'
             'RETURN _a, _b, _c'
         )
         self.assertEqual(query, expected)
