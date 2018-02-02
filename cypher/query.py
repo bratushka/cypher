@@ -171,13 +171,24 @@ class MatchingChain(Chain):
         """
         self.directions.append(direction)
 
-    def add_comparison(self, comparison: Comparison):
+    def add_conditions(
+            self,
+            details: ModelDetails,
+            conditions: Iterable[Callable],
+    ):
         """
-        Add `WHERE` condition.
+        Add `WHERE` comparisons to the chain.
 
-        :param comparison: Comparison object
+        :param details: details of the matching model
+        :param conditions: conditions to meet
         """
-        self.comparisons.append(comparison)
+        if details.instance:
+            uid = details.instance.uid
+            uid_equality = Equal(details.model, details.var, 'uid', uid)
+            self.comparisons.append(uid_equality)
+
+        for condition in conditions:
+            self.comparisons.append(condition(details.model, details.var))
 
     def stringify(self) -> str:
         """
@@ -270,26 +281,6 @@ class Query:
         # pylint: disable=too-many-function-args
         return ModelDetails(variable, model, instance, start, end, conn)
 
-    def _add_conditions(
-            self,
-            details: ModelDetails,
-            conditions: Iterable[Callable],
-    ):
-        """
-        Add conditions to the matching chain.
-
-        :param details: details of the matching model
-        :param conditions: conditions to meet
-        """
-        chain: MatchingChain = self.chains[-1]
-
-        if details.instance:
-            uid = details.instance.uid
-            chain.add_comparison(Equal(details.model, details.var, 'uid', uid))
-
-        for condition in conditions:
-            chain.add_comparison(condition(details.model, details.var))
-
     def match(self, node: NodeUnitOrTuple, *where: Callable) -> 'Query':
         """
         Set the starting node to the cypher `MATCH` query.
@@ -303,8 +294,8 @@ class Query:
 
         details = self._get_details(node)
         chain.add_node(details)
+        chain.add_conditions(details, where)
 
-        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
@@ -329,8 +320,8 @@ class Query:
         details = self._get_details(edge, conn)
         chain.add_edge(details)
         chain.add_path(next(self.path_generator))
+        chain.add_conditions(details, where)
 
-        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
@@ -349,8 +340,8 @@ class Query:
         details = self._get_details(node)
         chain.add_edge(details)
         chain.add_direction(Direction.NONE)
+        chain.add_conditions(details, where)
 
-        self._add_conditions(details, where)
         self.model_details[details.var] = details.model
         self.return_order.append(details.var)
 
