@@ -218,7 +218,7 @@ class MatchingChain(Chain):
         else:
             pattern = (
                 'MATCH {path} = '
-                '({start}){left}-[{edge}{conn}]-{right}({end})'
+                '({start}){left}-[{edge}{conn}]-{right}({end}){rels}'
             )
             lines = []
             for i in range(len(self.models) // 2):
@@ -232,9 +232,13 @@ class MatchingChain(Chain):
                         str(num) if num is not None else ''
                         for num in model.conn
                     ))
+                    rels = '\nWITH *, relationships({}) as {}'.format(
+                        self.paths[i], model.var
+                    )
                 else:
                     edge = model.get_var_and_labels()
                     conn = ''
+                    rels = ''
 
                 lines.append(pattern.format(
                     path=self.paths[i],
@@ -244,6 +248,7 @@ class MatchingChain(Chain):
                     conn=conn,
                     right='>' if self.directions[i] == Direction.FRONT else '',
                     end=self.models[i * 2 + 2].get_var_and_labels(),
+                    rels=rels
                 ))
         result = '\n'.join(lines)
 
@@ -344,12 +349,7 @@ class Query:
         chain.add_conditions(details, where)
 
         self.model_details[details.var] = details.model
-
-        if conn:
-            result = 'relationships({}) as {}'.format(path, details.var)
-            self.outcome[details.var] = Outcome(result, not_impl)
-        else:
-            self.outcome[details.var] = Outcome(details.var, not_impl)
+        self.outcome[details.var] = Outcome(details.var, not_impl)
 
         return self
 

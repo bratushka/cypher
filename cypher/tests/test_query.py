@@ -286,84 +286,70 @@ class MatchTests(TestCase):
             .result(no_exec=True)
         expected = (
             'MATCH _p1 = (_a:User)-[:Knows *1..3]-(_c:User)\n'
-            'RETURN _a, relationships(_p1) as _b, _c'
+            'WITH *, relationships(_p1) as _b\n'
+            'RETURN _a, _b, _c'
         )
         self.assertEqual(query, expected)
 
 
-class MegaTests(TestCase):
-    """
-    Complex tests to cover everything.
-    """
-    def test_match(self):
-        """
-        Test `match` query.
-        """
-        class User(Node):
-            """
-            Example of Node.
-            """
-            name = Props.String()
-
-        class Knows(Edge):
-            """
-            Example of edge.
-            """
-            since = Props.Date()
-
-        user = User(name='John', uid='john')
-        knows = Knows(since=date(1, 2, 3), uid='knows')
-
-        query = Query()\
-            .match(None)\
-            \
-            .match(User, User.uid == 'some_uid', User.name == 'Kate')\
-            \
-            .match(user)\
-            \
-            .match(User)\
-            .connected_through(Knows, conn=(1, 3))\
-            .with_(None)\
-            \
-            .match(None)\
-            .connected_through(None)\
-            .with_(User)\
-            \
-            .match(user)\
-            .connected_through(knows)\
-            .with_((None, 'blah'))\
-            \
-            .result(no_exec=True)
-        expected = (
-            'MATCH (_a)\n'
-            'MATCH (_b:User)\n'
-            'WHERE _b.uid = "some_uid"\n'
-            '  AND _b.name = "Kate"\n'
-            'MATCH (_c:User)\n'
-            'WHERE _c.uid = "john"\n'
-            'MATCH _p1 = (_d:User)-[:Knows *1..3]-(_f)\n'
-            'MATCH _p2 = (_g)-[_h]-(_i:User)\n'
-            'MATCH _p3 = (_j:User)-[_k:Knows]-(blah)\n'
-            'WHERE _j.uid = "john"\n'
-            '  AND _k.uid = "knows"\n'
-            'RETURN _a, _b, _c, _d, relationships(_p1) as _e,'  # no new line
-            ' _f, _g, _h, _i, _j, _k, blah'
-        )
-
-        self.assertEqual(query, expected)
-
-# @TODO: ^ should be like below
-# MATCH (_a)
-# MATCH (_b:User)
-# WHERE _b.uid = "some_uid"
-#   AND _b.name = "Kate"
-# MATCH (_c:User)
-# WHERE _c.uid = "john"
-# MATCH _p1 = (_d:User)-[:Knows *1..3]-(_f)
-# WITH *, relationships(_p1) as _e
-# WHERE all(el in _e WHERE el.since > 34)
-# MATCH _p2 = (_g)-[_h]-(_i:User)
-# MATCH _p3 = (_j:User)-[_k:Knows]-(blah)
-# WHERE _j.uid = "john"
-#   AND _k.uid = "knows"
-# RETURN _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, blah
+# class MegaTests(TestCase):
+#     """
+#     Complex tests to cover everything.
+#     """
+#     def test_match(self):
+#         """
+#         Test `match` query.
+#         """
+#         class User(Node):
+#             """
+#             Example of Node.
+#             """
+#             name = Props.String()
+#
+#         class Knows(Edge):
+#             """
+#             Example of edge.
+#             """
+#             since = Props.Date()
+#
+#         user = User(name='John', uid='john')
+#         knows = Knows(since=date(1, 2, 3), uid='knows')
+#
+#         query = Query()\
+#             .match(None)\
+#             \
+#             .match(User, User.uid == 'some_uid', User.name == 'Kate')\
+#             \
+#             .match(user)\
+#             \
+#             .match(User)\
+#             .connected_through(Knows, Knows.since > date(1, 2, 3), conn=(1, 3))\
+#             .with_(None)\
+#             \
+#             .match(None)\
+#             .connected_through(None)\
+#             .with_(User)\
+#             \
+#             .match(user)\
+#             .connected_through(knows)\
+#             .with_((None, 'blah'))\
+#             \
+#             .result(no_exec=True)
+#         expected = (
+#             'MATCH (_a)\n'
+#             'MATCH (_b:User)\n'
+#             'WHERE _b.uid = "some_uid"\n'
+#             '  AND _b.name = "Kate"\n'
+#             'MATCH (_c:User)\n'
+#             'WHERE _c.uid = "john"\n'
+#             'MATCH _p1 = (_d:User)-[:Knows *1..3]-(_f)\n'
+#             'WITH *, relationships(_p1) as _e\n'
+#             'WHERE all(el in _e WHERE el.since > 34)\n'
+#             'MATCH _p2 = (_g)-[_h]-(_i:User)\n'
+#             'MATCH _p3 = (_j:User)-[_k:Knows]-(blah)\n'
+#             'WHERE _j.uid = "john"\n'
+#             '  AND _k.uid = "knows"\n'
+#             'RETURN _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, blah'
+#         )
+#
+#         self.assertEqual(query, expected)
