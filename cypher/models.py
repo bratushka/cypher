@@ -3,15 +3,13 @@ Objects representing the cypher nodes and edges.
 """
 from typing import Any, Iterable, Mapping, MutableMapping, MutableSet
 
-from .props import BaseProp, Props
+from .props import BaseProp
 
 
 class Model:
     """
     Common logic for Node and Edge.
     """
-    uid = Props.String()
-
     class Meta:
         """
         Meta data for the model.
