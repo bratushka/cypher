@@ -2,6 +2,7 @@
 Properties for models.
 """
 import json
+import uuid
 from datetime import date, datetime
 from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
@@ -29,7 +30,14 @@ class BaseProp:
         Configure property.
         """
         self.required = required
-        self.default = default
+        self._default = default if callable(default) else lambda: default
+
+    @property
+    def default(self):
+        """
+        :return: computed default value
+        """
+        return self._default()
 
     @classmethod
     def validate_type(cls, value: Any):
@@ -193,6 +201,20 @@ class Props:
         String property.
         """
         types = (str,)
+
+    class UID(BaseProp):
+        """
+        Unique ID property.
+        """
+        types = (str,)
+
+        def __init__(self, *args, **kwargs):
+            """
+            Add `default` uuid hex value.
+            """
+            kwargs['default'] = lambda: uuid.uuid4().hex
+
+            super().__init__(*args, **kwargs)
 
     class Date(BaseProp):
         """

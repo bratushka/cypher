@@ -1,7 +1,6 @@
 """
 Objects representing the cypher nodes and edges.
 """
-import uuid
 from typing import Any, Iterable, Mapping, MutableMapping, MutableSet
 
 from .props import BaseProp, Props
@@ -32,8 +31,6 @@ class Model:
             for prop in dir(cls)
             if isinstance(getattr(self, prop), BaseProp)
         }
-        if 'uid' not in kwargs:
-            kwargs['uid'] = uuid.uuid4().hex
 
         for name, prop in model_props.items():
             value = kwargs.get(name, prop.default)

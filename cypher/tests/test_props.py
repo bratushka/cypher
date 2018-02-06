@@ -173,6 +173,25 @@ class StringTests(TestCase):
                 Props.String.validate(cls('1'))
 
 
+class UIDTests(TestCase):
+    """
+    Tests for Props.UID class.
+    """
+    def test_default(self):
+        """
+        Test default value.
+        """
+        first = Props.UID().default
+        second = Props.UID().default
+        third = Props.UID(default=123).default
+        fourth = Props.UID(default=123).default
+
+        self.assertNotEqual(first, second)
+        self.assertNotEqual(first, third)
+        self.assertNotEqual(second, third)
+        self.assertNotEqual(third, fourth)
+
+
 class DateTests(TestCase):
     """
     Tests for Props.Date class.
