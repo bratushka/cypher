@@ -3,6 +3,9 @@
 ## Simple example
 ```python
 class User(Node):
+    class Meta(Node.Meta):
+        primary_key = 'email'
+
     email = Props.Email(unique=True)
     password = Props.String()
 ```
@@ -10,82 +13,73 @@ class User(Node):
 ### Create
 ```python
 user = User(email='admin@localhost', password='some_password')
-user, = (Query()
-    .create(user)
-    .result()
+user, = Query()\
+    .create(user)\
+    .result()\
     [0]
-)
 ```
 ```cypher
-CREATE
-    (a:User { email: 'admin@localhost', password: 'some_password' })
-RETURN a
+CREATE (_a:User {email: "admin@localhost", password: "some_password"})
+RETURN _a
 ```
 
 ### Retrieve
 ```python
-user, = (Query()
-    .match(User, User.email == 'admin@localhost')
-    .result()
+user, = Query()\
+    .match(User)\
+    .where(User.email == 'admin@localhost')\
+    .result()\
     [0]
-)
 ```
 ```cypher
-MATCH
-    (a:User { email: 'admin@localhost' })
-RETURN a
+MATCH (_a:User)
+WHERE _a.email = 'admin@localhost'
+RETURN _a
 ```
 
 ### Update
 ```python
-# `user` should be fetched from the database, so having an internal ID
+# `user` should be fetched from the database
 user.password = 'some_new_password'
-user, = (Query()
-    .update(user)
-    .result()
+user, = Query()\
+    .update(user)\
+    .result()\
     [0]
-)
 ```
 ```cypher
-MATCH
-    (a)
-WHERE
-    id(a) = 12345
-SET
-    a.password = 'some_new_password'
-RETURN a
+MATCH (_a:User)
+WHERE _a.email = "admin@localhost"
+SET _a.password = 'some_new_password'
+RETURN _a
 ```
 
 ### Delete
 ```python
-(Query()
-    .delete(user)
-)
-# or
-(Query()
-    .match(User, User.email == 'admin@localhost')
+Query()\
+    .match(User)\
+    .where(User.email == 'admin@localhost')\
     .delete()
-)
 ```
 ```cypher
-MATCH
-    (a)
-WHERE
-    id(a) = 12345
-DETACH DELETE a
-// or
-MATCH
-    (a:User { email: 'admin@localhost' })
-DETACH DELETE a
+MATCH (_a:User)
+WHERE _a.email = "admin@localhost"
+DETACH DELETE _a
 ```
 
 ## Complex example
 ```python
 class User(Node):
-    email = Props.Email()
+    class Meta(Node.Meta):
+        primary_key = 'email'
+
+    email = Props.Email(unique=True)
 
 
 class Knows(Edge):
+    class Meta(Edge.Meta):
+        primary_key = 'uid'
+
+    uid = Props.String(unique=True, default=lambda: uuid.uuid4().hex)
     since = Props.Date()
 ```
 
@@ -95,55 +89,53 @@ john = User(email='john@localhost')
 dow = User(email='dow@localhost')
 knows = Knows(john, dow, since=datetime.date(1999, 10, 5))
 
-john, knows, dow = (Query()
-    .create(john, knows, dow)
-    .result()
+john, knows, dow = Query()\
+    .create(john, knows, dow)\
+    .result()\
     [0]
-)
 # If you don't need `john` to be returned, but it already exists - don't mention
-#  him in the `create` statement.
-knows, dow = (Query()
-    .create(knows, dow)
-    .result()
+#  him in the `create` statement. If `dow` not mentioned - it will still be
+#  created, but not returned.
+knows, = Query()\
+    .create(knows)\
+    .result()\
     [0]
-)
 ```
 ```cypher
-CREATE
-    (a:User { email: 'john@localhost' }),
-    (b:User { email: 'dow@localhost' }),
-    (a)-[c:Knows { since: 730032 }]->(b)  // date(1999, 10, 5).toordinal()
-RETURN a, c, b
+CREATE (_a:User {email: 'john@localhost'}),
+       (_c:User {email: 'dow@localhost'}),
+       (_a)-[_b:Knows {since: 730032}]->(_c)
+RETURN _a, _b, _c
 // and if `john` existed before and was not mentioned in `create`
-MATCH
-    (a)
-WHERE
-    id(a) = 12345
-CREATE
-    (b:User { email: 'dow@localhost' }),
-    (a)-[c:Knows { since: 730032 }]->(b)
-RETURN c, b
+MATCH (_a:User)
+WHERE _a.email = 'john@localhost'
+CREATE (_c:User {email: 'dow@localhost'}),
+       (_a)-[_b:Knows {since: 730032}]->(_c)
+RETURN _b
 ```
 
 ### Retrieve
 ```python
-knows, dow = (Query()
-    .match((User, 'john'), User.email == 'john@localhost')
-    .connected_through((Knows, 'knows'), Knows.since >= date(1990, 1, 1))
-    .to((User, 'dow'), User.email.startswith('dow'))
-    .where(Value('john.email') != Value('dow.email'))
-    .result('knows', 'dow')
+knows, dow = Query()\
+    .match(User, 'john')\
+    .where(User.email == 'john@localhost')\
+    .connected_through(Knows, 'knows')\
+    .where(Knows.since >= date(1990, 1, 1))\
+    .to(User, 'dow')\
+    .where(
+        User.email.startswith('dow'),
+        Value('john.email') != Value('dow.email')
+    )\
+    .result('knows', 'dow')\
     [0]
-)
 ```
 ```cypher
-MATCH
-    (john:User { email: 'john@localhost' })-[knows:Knows]->(dow:User)
-WHERE
-    knows.since >= 730032
-AND dow.email STARTS WITH 'dow'
-AND john.email <> dow.email
-RETURN knows, dow
+MATCH (john:User)-[knows:Knows]->(dow:User)
+WHERE john.email = 'john@localhost'
+  AND knows.since >= 730032
+  AND dow.email STARTS WITH 'dow'
+  AND john.email <> dow.email
+RETURN knows
 ```
 
 ### Update
@@ -151,40 +143,35 @@ RETURN knows, dow
 dow.email = 'another@localhost'
 knows.since = datetime.date(2000, 1, 1)
 
-dow, = (Query()
-    .update((dow, 'dow'), knows)
-    .result('dow')
+dow, = Query()\
+    .update(dow, 'dow')\
+    .update(knows)\
+    .result('dow')\
     [0]
-)
 ```
 
 ### Delete
 ```python
 # This will delete `john` and `dow`. `knows` will be deleted too because an edge
 #  cannot exist without any of its nodes.
-(Query()
-    .delete(john, dow)
-)
+Query().delete(john, dow)
 
 # This will delete all the users, whom John knows. All the edges of those users
 #  will be deleted too.
-(Query()
-    .match(User, User.email == 'john@localhost')
-    .connected_through(Knows)
-    .by((User, 'friend'))
+Query()\
+    .match(john)\
+    .connected_through(Knows)\
+    .by(User, 'friend')\
     .delete('friend')
-)
 ```
 ```cypher
-MATCH
-    (a:User),
-    (b:User)
-WHERE
-    id(a) = 12345
-AND id(b) = 23456
-DETACH DELETE a, b
+MATCH (_a:User), (_b:User)
+WHERE _a.email = 'john@localhost'
+  AND _b.email = 'dow@localhost'
+DETACH DELETE _a, _b
+
 // second example
-MATCH
-    (a:User { email: 'john@localhost' })<-[b:Knows]-  (friend:User)
+MATCH (_a:User)<-[_b:Knows]-(friend:User)
+WHERE _a.email = 'john@localhost'
 DETACH DELETE friend
 ```
