@@ -32,13 +32,14 @@ class DB:
 
         :return: database driver
         """
-        if not self._driver:
-            self._driver = GraphDatabase.driver(
-                self.url,
-                auth=(self.username, self.password),
-            )
-
-        return self._driver
+        raise NotImplementedError
+        # if not self._driver:
+        #     self._driver = GraphDatabase.driver(
+        #         self.url,
+        #         auth=(self.username, self.password),
+        #     )
+        #
+        # return self._driver
 
 
 class Config:
