@@ -1,6 +1,7 @@
 ```python
 class Person(Node):
-    class Meta(NodeMeta):
+    class Meta(Node.Meta):
+        primary_key = 'email'
         unique_together = (
             ('age', 'name'),
         )
@@ -31,7 +32,7 @@ class Person(Node):
         Props.Integer(),
     )
     keys = Props.Map(
-        default={
+        default=lambda: {
             'home': '$HOME$KEY$',
             'office': '$OFFICE$KEY$',
         },
