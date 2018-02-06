@@ -116,7 +116,16 @@ class Props:
         """
         Boolean property.
         """
-        types = (bool,)
+
+        @staticmethod
+        def normalize(value: Any) -> bool:
+            """
+            Transform assigned value to boolean.
+
+            :param value: value to transform
+            :return: transformed value
+            """
+            return bool(value)
 
     class Integer(BaseProp):
         """

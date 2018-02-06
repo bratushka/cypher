@@ -95,15 +95,23 @@ class BooleanTests(TestCase):
     """
     Tests for Props.Boolean class.
     """
-    def test_types(self):
+    @staticmethod
+    def test_types():
         """
         Should accept only boolean values.
         """
-        Props.Boolean.validate(True)
+        for value in (True, 2, 2.2, 'str', ['list']):
+            Props.Boolean.validate(value)
 
-        for cls in (int, float, str):
-            with self.assertRaises(TypeError):
-                Props.Boolean.validate(cls(True))
+    def test_normalize(self):
+        """
+        Should convert all the values to boolean.
+        """
+        for value, expected in zip(
+                (True, 0, 2, 2.2, 'str', [], ['list']),
+                (True, False, True, True, True, False, True),
+        ):
+            self.assertIs(Props.Boolean.normalize(value), expected)
 
 
 class IntegerTests(TestCase):
