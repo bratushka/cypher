@@ -15,7 +15,7 @@ class BaseProp:
     """
     Base class for all properties.
     """
-    types: Iterable[Type] = ()
+    types: Iterable[Type] = (object,)
     rules: Iterable[Callable] = ()
 
     def __init__(
