@@ -1,61 +1,6 @@
 # Query API
 
-## Actions
-
----
-
-### `.match()`
-
-From:
-1. `Query()`
-
-To:
-1. `.match()`
-1. `.create() | .update()`
-1. `.result()`
-1. `.delete()`
-1. `.connected_through()`
-
----
-
-### `.create() | .update()`
-
-From:
-1. `Query()`
-1. `.match()`
-1. `.to | .by()`
-
-To:
-1. `.result()`
-
----
-
-### `.connected_through()`
-
-From:
-1. `.match()`
-1. `.to() | .by()`
-
-To:
-1. `.to() | .by()`
-
----
-
-### `.to() | .by()`
-
-From:
-1. `.connected_through()`
-
-To:
-1. `.match()`
-1. `.connected_through()`
-1. `.create() | .update()`
-1. `.result()`
-1. `.delete()`
-
----
-
-## Method Chains
+## Chains
 
 ### Matching chain
 
@@ -78,39 +23,38 @@ Query().match(User).result()
 ```
 
 ```cypher
-MATCH
-    (a:User)
-RETURN a
+MATCH (_a:User)
+RETURN _a
 ```
 
 Complex:
 
 ```python
-(Query()
-    .match((User, 'a'))
-    .where(User.age > 21)
-    .connected_through(Knows)
-    .where(Knows.starting_from < timedelta(days=-365))
-    .to((User, 'b'))
-    .where(Value('b.age') > Value('a.age'))
-    .where(User.age < 99)
-    .connected_through(Hired)
-    .by(Company, Company.name == 'ACME')
-    .match((Job, 'c'))
+Query()\
+    .match(User, 'a')\
+    .where(User.age > 21)\
+    .connected_through(Knows, conn=(None, 2))\
+    .where(Knows.starting_from < datetime.date(1, 2, 3))\
+    .to(User, 'b')\
+    .where(Value('b.age') > Value('a.age'))\
+    .where(User.age < 99)\
+    .connected_through(Hired, 'hired')\
+    .by(Company)\
+    .where(Company.name == 'ACME')\
+    .match(Job, 'c')\
     .result('b', 'c')
-)
 ```
 
 ```cypher
-MATCH
-    (a:User)-[random_var_1:Knows]->(b:User)<-[:Hired]-(random_var_2:Company),
-    (c:Job)
-WHERE
-    a.age > 21
-AND random_var_1.starting_from < 123123123
-AND b.age > a.age
-AND b.age < 99
-AND random_var_2 = "ACME"
+MATCH _p1 = (a:User)-[_a:Knows *..2]->(b:User)
+WITH *, relationships(_p1) as _a
+WHERE a.age > 21
+  AND all(el in _a WHERE el.starting_from < 34)
+  AND b.age > a.age
+  AND b.age < 99
+MATCH _p2 = (b)<-[hired:Hired]-(_b:Company)
+WHERE _b.name = 'ACME'
+MATCH (c:Job)
 RETURN b, c
 ```
 
@@ -140,20 +84,42 @@ Complex:
 # `john` is fetched from database. He joined the ACME company today, so
 #  everybody in his new working place knows him now. He knows himself too, but
 #  we will not store this information.
-friends = (Query()
-    .match((john, 'john'))
-    .match((User, 'colleague'), User.uid != john.uid, User.company == 'ACME')
-    .create(Knows('colleague', 'john', starting_from=date.today()))
-    .result('colleague')
-)
+friends = Query()\
+    .match(User)\
+    .where(
+        User.email != john.email,
+        User.company == 'ACME',
+    )\
+    .result()
+
+today = datetime.date.today()
+Query()\
+    .create(*map(
+        lambda friend: Knows(friend, john, starting_from=today),
+        friends,
+    ))\
+    .result(None)
 ```
 
 ```cypher
-MATCH (john:User), (colleague:User)
-WHERE
-    john.uid = "abc123abd456"
-AND colleague.uid <> "abc123abd456"
-AND colleague.company = "ACME"
-CREATE (colleague)-[:Knows {starting_from: 123123}]->(john)
-RETURN colleague
+// First query.
+MATCH (_a:User)
+WHERE _a.email <> "john@localhost"
+  AND _a.company = "ACME"
+RETURN _a
+
+// Second query.
+MATCH (_a:User)
+WHERE _a.email = "friend_1@localhost"
+MATCH (_b:User)
+WHERE _b.email = "john@localhost"
+MATCH (_c:User)
+WHERE _c.email = "friend_2@localhost"
+MATCH (_d:User)
+WHERE _d.email = "friend_3@localhost"
+// and so on till we find all the friends
+CREATE (_a)-[_wa:Knows {starting_from: 123123}]->(_b),
+       (_c)-[_wa:Knows {starting_from: 123123}]->(_b),
+       (_d)-[_wa:Knows {starting_from: 123123}]->(_b)
+// and so on till we create all the edges
 ```
