@@ -28,7 +28,7 @@ class Value:
         self.wrappers = wrappers or []
 
     @classmethod
-    def _cypherify_other(cls, other: Any) -> str:
+    def _cypherify_other(cls, other: Any, var: str) -> str:
         """
         Transform python object into string.
 
@@ -36,7 +36,7 @@ class Value:
         :return: cypherified value
         """
         if isinstance(other, Value):
-            return '%s.%s' % (other.var, other.prop)
+            return '%s.%s' % (other.var or var, other.prop)
 
         other = cls.prop_type.normalize(other)
         cls.prop_type.validate(other)
@@ -67,7 +67,7 @@ class Value:
                     '.'.join((self.var or var, self.prop)),
                 ),
                 operator,
-                self._cypherify_other(other),
+                self._cypherify_other(other, var),
             ))
 
         return comparison

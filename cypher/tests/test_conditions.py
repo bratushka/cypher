@@ -22,6 +22,10 @@ class ValueTests(unittest.TestCase):
         expected = 'a.name > b.email'
         self.assertEqual(actual, expected)
 
+        actual = (Value('a.name') > Value('email'))('c')
+        expected = 'a.name > c.email'
+        self.assertEqual(actual, expected)
+
     def test_to_bool(self):
         """
         Test `to_bool` transformation.
