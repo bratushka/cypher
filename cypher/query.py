@@ -1,6 +1,197 @@
 """
 Cypher query builder.
 """
+import enum
+import itertools
+import string
+from typing import (
+    Generator,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    List,
+    Optional,
+    Type,
+    Union,
+)
+
+from .models import Edge, Node
+
+
+Model = Union[Edge, Node]
+Identifier = Union[Model, Type[Model]]
+
+
+def generate_paths() -> Generator[str, None, None]:
+    """
+    Generate path variables: "_p1", "_p2", "_p3", ...
+
+    :return: generator of path variables
+    """
+    for i in itertools.count(1):
+        yield '_p' + str(i)
+
+
+def generate_variables() -> Generator[str, None, None]:
+    """
+    Generate variables: "_a", "_b", ..., "_z", "_aa", "_ab", ...
+    Non of variables should start with "_p".
+
+    :return: generator of variables
+    """
+    for i in itertools.count(1):
+        for letters in itertools.product(string.ascii_lowercase, repeat=i):
+            if not letters[0] == 'p':
+                yield '_' + ''.join(letters)
+
+
+class Direction(enum.Enum):
+    """
+    Directions of edges in cypher patterns.
+    """
+    NONE = enum.auto()
+    BACK = enum.auto()
+    FRONT = enum.auto()
+
+
+class ModelDetails:
+    """
+    Organized details of a pattern unit.
+    """
+    __slots__ = ['var', 'type', 'instance']
+
+    def __init__(self, identifier: Identifier, var: str):
+        self.var = var
+
+        if isinstance(identifier, (Node, Edge)):
+            self.type = type(identifier)
+            self.instance = identifier
+        elif issubclass(identifier, (Node, Edge)):
+            self.type = identifier
+            self.instance = None
+        else:
+            raise TypeError
+        # self.start: Optional[str] = None
+        # self.end: Optional[str] = None
+        # self.conn: Optional[Tuple[Optional[int], Optional[int]]] = None
+
+    def get_labels(self) -> List[str]:
+        """
+        :return: sorted tuple of labels
+        """
+        if self.instance:
+            return sorted(self.instance.labels)
+
+        if self.type and self.type is not Edge and self.type is not Node:
+            return [self.type.__name__]
+
+        return []
+
+    def get_var_and_labels(self) -> str:
+        """
+        Get a string ready to be used in cypher pattern.
+        Example: `a:Human:Person`.
+        """
+        return ':'.join((self.var, *self.get_labels()))
+
+
+class Chain:
+    """
+    Base class for all chains.
+    """
+    def __init__(self, details: Mapping[str, ModelDetails]):
+        self.details = details
+        self.elements: List[str] = []
+        self.directions: List[Direction] = []
+
+
+class MatchingChain(Chain):
+    """
+    Matching chain builder.
+    """
+    def _check_pattern_integrity(self):
+        """
+        Check if the pattern is valid.
+        """
+
+    def add_node(self, var: str, direction: Direction = None):
+        """
+        Add a node to the matching pattern.
+        """
+        self.directions.append(direction)
+        self.elements.append(var)
+
+        self._check_pattern_integrity()
+
+    def __str__(self) -> str:
+        """
+        Stringify the chain.
+        """
+        query = ''
+
+        if len(self.elements) == 1:
+            element = self.elements[0]
+            query = 'MATCH (%s)' % self.details[element].get_var_and_labels()
+        return query
+
+
+class Query:
+    """
+    Cypher query builder.
+    """
+    def __init__(self):
+        self.var_generator = generate_variables()
+        self.chains: List[Chain] = []
+        self.details: MutableMapping[str, ModelDetails] = {}
+        self.output: List[str] = []
+
+    def _add_details(
+            self,
+            identifier: Identifier,
+            var: Optional[str],
+    ) -> str:
+        """
+        Generate a variable if needed and add a ModelDetails instance to
+        `details` property.
+        """
+        var = var or next(self.var_generator)
+        self.details[var] = ModelDetails(identifier, var)
+
+        return var
+
+    def match(
+            self,
+            identifier: Optional[Identifier],
+            var: str = None,
+    ) -> 'Query':
+        """
+        Start a `MatchingChain`.
+        """
+        var = self._add_details(identifier or Node, var)
+        self.output.append(var)
+
+        chain = MatchingChain(self.details)
+        chain.add_node(var)
+        self.chains.append(chain)
+
+        return self
+
+    def result(
+            self,
+            *,
+            no_exec: bool = False,
+    ) -> Iterable:
+        """
+        Execute the query and map the results.
+        """
+        output = 'RETURN %s' % ', '.join(self.output)
+        query = '\n'.join((*map(str, self.chains), output))
+
+        if no_exec:
+            return query
+        raise NotImplementedError
+
+
 # import enum
 # import itertools
 # import string

@@ -2,33 +2,44 @@
 Tests for `query.py`.
 """
 # from datetime import date
-# from unittest import TestCase
+from unittest import TestCase
 #
 # from ..props import Props
-# from ..models import Edge, Node
-# from ..query import Query
-#
-#
-# class MatchTests(TestCase):
-#     """
-#     Test building queries.
-#     """
-#     def test_match_by_class(self):
-#         """
-#         The most simple `match` scenario.
-#         """
-#         class Human(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         query = Query().match(Human).result(no_exec=True)
-#         expected = (
-#             'MATCH (_a:Human)\n'
-#             'RETURN _a'
-#         )
-#         self.assertEqual(query, expected)
+from ..models import Node
+from ..query import Query
+
+
+class MatchTests(TestCase):
+    """
+    Test building queries.
+    """
+    def test_match_by_none(self):
+        """
+        Match all the nodes.
+        """
+        query = Query().match(None).result(no_exec=True)
+        expected = (
+            'MATCH (_a)\n'
+            'RETURN _a'
+        )
+        self.assertEqual(query, expected)
+
+    def test_match_by_class(self):
+        """
+        The most simple `match` scenario.
+        """
+        class Human(Node):
+            """
+            Example of Node.
+            """
+            pass
+
+        query = Query().match(Human).result(no_exec=True)
+        expected = (
+            'MATCH (_a:Human)\n'
+            'RETURN _a'
+        )
+        self.assertEqual(query, expected)
 #
 #     def test_match_by_instance(self):
 #         """
