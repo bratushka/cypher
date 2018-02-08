@@ -9,8 +9,6 @@ class Value:
     """
     Represent any type of value.
     """
-    # prop_type = BaseProp
-
     def __init__(
             self,
             *,

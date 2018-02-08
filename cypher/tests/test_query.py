@@ -32,7 +32,6 @@ class MatchTests(TestCase):
             """
             Example of Node.
             """
-            pass
 
         query = Query().match(Human).result(no_exec=True)
         expected = (
@@ -49,7 +48,6 @@ class MatchTests(TestCase):
             """
             Example of not Node.
             """
-            pass
 
         with self.assertRaises(TypeError):
             # noinspection PyTypeChecker
@@ -81,62 +79,64 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-#     def test_combined_match_by_class(self):
-#         """
-#         Combination of 2 most simple `match` scenarios.
-#         """
-#         class Human(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         class Animal(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         query = Query().match(Human).match(Animal).result(no_exec=True)
-#         expected = (
-#             'MATCH (_a:Human)\n'
-#             'MATCH (_b:Animal)\n'
-#             'RETURN _a, _b'
-#         )
-#         self.assertEqual(query, expected)
-#
-#     def test_combined_match_by_class_and_instance(self):
-#         """
-#         Combination of matching by class and instance.
-#         """
-#         # pylint: disable=invalid-name
-#         # This suppresses error for the method name.
-#         # pylint: enable=no-member
-#         class Human(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         class Animal(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         human = Human(uid='human_uid')
-#         query = Query()\
-#             .match(human)\
-#             .match(Animal)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH (_a:Human)\n'
-#             'WHERE _a.uid = "human_uid"\n'
-#             'MATCH (_b:Animal)\n'
-#             'RETURN _a, _b'
-#         )
-#         self.assertEqual(query, expected)
-#
+    def test_combined_match_by_class(self):
+        """
+        Combination of 2 most simple `match` scenarios.
+        """
+        class Human(Node):
+            """
+            Example of Node.
+            """
+
+        class Animal(Node):
+            """
+            Example of Node.
+            """
+
+        query = Query().match(Human).match(Animal).result(no_exec=True)
+        expected = (
+            'MATCH (_a:Human)\n'
+            'MATCH (_b:Animal)\n'
+            'RETURN _a, _b'
+        )
+        self.assertEqual(query, expected)
+
+    def test_combined_match_by_class_and_instance(self):
+        """
+        Combination of matching by class and instance.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        class Human(Node):
+            """
+            Example of Node.
+            """
+            class Meta(Node.Meta):
+                """
+                Example of Node.Meta.
+                """
+                primary_key = 'name'
+            name = Props.String()
+
+        class Animal(Node):
+            """
+            Example of Node.
+            """
+
+        human = Human(name='human_name')
+        query = Query()\
+            .match(human)\
+            .match(Animal)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH (_a:Human)\n'
+            'WHERE _a.name = "human_name"\n'
+            'MATCH (_b:Animal)\n'
+            'RETURN _a, _b'
+        )
+        self.assertEqual(query, expected)
+
 #     def test_match_by_class_with_comparison(self):
 #         """
 #         Add a `where` to the most simple `match` scenario.
