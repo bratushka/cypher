@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from .models import Edge, Node
+from .models import Edge, ModelDetails, Node
 
 
 Model = Union[Edge, Node]
@@ -54,47 +54,6 @@ class Direction(enum.Enum):
     FRONT = enum.auto()
 
 
-class ModelDetails:
-    """
-    Organized details of a pattern unit.
-    """
-    __slots__ = ['var', 'type', 'instance']
-
-    def __init__(self, identifier: Identifier, var: str):
-        self.var = var
-
-        if isinstance(identifier, (Node, Edge)):
-            self.type = type(identifier)
-            self.instance = identifier
-        elif issubclass(identifier, (Node, Edge)):
-            self.type = identifier
-            self.instance = None
-        else:
-            raise TypeError
-        # self.start: Optional[str] = None
-        # self.end: Optional[str] = None
-        # self.conn: Optional[Tuple[Optional[int], Optional[int]]] = None
-
-    def get_labels(self) -> List[str]:
-        """
-        :return: sorted tuple of labels
-        """
-        if self.instance:
-            return sorted(self.instance.labels)
-
-        if self.type and self.type is not Edge and self.type is not Node:
-            return [self.type.__name__]
-
-        return []
-
-    def get_var_and_labels(self) -> str:
-        """
-        Get a string ready to be used in cypher pattern.
-        Example: `a:Human:Person`.
-        """
-        return ':'.join((self.var, *self.get_labels()))
-
-
 class Chain:
     """
     Base class for all chains.
@@ -102,13 +61,18 @@ class Chain:
     def __init__(self, details: Mapping[str, ModelDetails]):
         self.details = details
         self.elements: List[str] = []
-        self.directions: List[Direction] = []
 
 
 class MatchingChain(Chain):
     """
     Matching chain builder.
     """
+    def __init__(self, details):
+        super().__init__(details)
+
+        self.directions: List[Direction] = []
+        self.conditions: List[str] = []
+
     def _check_pattern_integrity(self):
         """
         Check if the pattern is valid.
@@ -121,7 +85,24 @@ class MatchingChain(Chain):
         self.directions.append(direction)
         self.elements.append(var)
 
+        model = self.details[var]
+        if model.instance is not None:
+            prop_name = model.type.Meta.primary_key
+            prop = getattr(model.type, prop_name)
+            value = getattr(model.instance, prop_name)
+            self.add_condition(prop == value)
+
         self._check_pattern_integrity()
+
+    # def add_edge(self):
+    #     pass
+
+    def add_condition(self, comparison):
+        """
+        Add a condition to the query.
+        """
+        last_element = self.details[self.elements[-1]]
+        self.conditions.append(comparison(last_element))
 
     def __str__(self) -> str:
         """
@@ -132,6 +113,11 @@ class MatchingChain(Chain):
         if len(self.elements) == 1:
             element = self.elements[0]
             query = 'MATCH (%s)' % self.details[element].get_var_and_labels()
+
+        if self.conditions:
+            conditions = '\nWHERE ' + '\n  AND '.join(self.conditions)
+            query += conditions
+
         return query
 
 

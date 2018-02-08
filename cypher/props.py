@@ -7,6 +7,8 @@ from datetime import date, datetime
 from math import ceil, floor, isclose
 from typing import Any, Callable, Iterable, Type, TypeVar, Union
 
+from .conditions import Value, StringValue
+
 
 T = TypeVar('T')
 
@@ -17,6 +19,7 @@ class BaseProp:
     """
     types: Iterable[Type] = (object,)
     rules: Iterable[Callable] = ()
+    value_type = Value
 
     def __init__(
             self,
@@ -107,6 +110,9 @@ class BaseProp:
         """
         return value
 
+    def __eq__(self, other):
+        return self.value_type(prop=self) == other
+
 
 class Props:
     """
@@ -158,6 +164,7 @@ class Props:
         String property.
         """
         types = (str,)
+        value_type = StringValue
 
     class UID(BaseProp):
         """

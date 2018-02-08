@@ -4,31 +4,23 @@ Conditions for queries.
 import functools
 from typing import Any, Callable, Type
 
-from .props import BaseProp, Props
-
 
 class Value:
     """
     Represent any type of value.
     """
-    prop_type = BaseProp
+    # prop_type = BaseProp
 
     def __init__(
             self,
-            prop: str = None,
             *,
+            prop: 'BaseProp' = None,
             wrappers: Callable[[str], str] = None,
     ):
-        if '.' in prop:
-            self.var, self.prop = prop.split('.')
-        else:
-            self.prop = prop
-            self.var = None
-
+        self.prop = prop
         self.wrappers = wrappers or []
 
-    @classmethod
-    def _cypherify_other(cls, other: Any, var: str) -> str:
+    def _cypherify_other(self, other: Any, var: str) -> str:
         """
         Transform python object into string.
 
@@ -38,16 +30,16 @@ class Value:
         if isinstance(other, Value):
             return '%s.%s' % (other.var or var, other.prop)
 
-        other = cls.prop_type.normalize(other)
-        cls.prop_type.validate(other)
+        other = self.prop.normalize(other)
+        self.prop.validate(other)
 
-        return cls.prop_type.to_cypher_value(other)
+        return self.prop.to_cypher_value(other)
 
     def _comparison_builder(
             self,
             other: Any,
             operator: str,
-    ) -> Callable[[Any, str], str]:
+    ) -> Callable[['ModelDetails', 'BaseProp'], str]:
         """
         Build the function that given the variable will return a cypher
         condition.
@@ -56,18 +48,37 @@ class Value:
         :param operator: cypher operator to apply
         :return:
         """
-        def comparison(var: str) -> str:
+        # def comparison(var: str) -> str:
+        #     """
+        #     Comparison creator.
+        #     """
+        #     return ' '.join((
+        #         functools.reduce(
+        #             lambda value, wrapper: wrapper(value),
+        #             self.wrappers,
+        #             '.'.join((self.var or var, self.prop)),
+        #         ),
+        #         operator,
+        #         self._cypherify_other(other, var),
+        #     ))
+        def comparison(details: 'ModelDetails') -> str:
             """
             Comparison creator.
             """
+            prop_name = next(
+                name
+                for name in dir(details.type)
+                if getattr(details.type, name) is self.prop
+            )
+
             return ' '.join((
                 functools.reduce(
                     lambda value, wrapper: wrapper(value),
                     self.wrappers,
-                    '.'.join((self.var or var, self.prop)),
+                    '.'.join((details.var, prop_name)),
                 ),
                 operator,
-                self._cypherify_other(other, var),
+                self._cypherify_other(other, details.var),
             ))
 
         return comparison
@@ -77,20 +88,20 @@ class Value:
 
         return value_type(prop, wrappers=self.wrappers)
 
-    def to_bool(self) -> 'BooleanValue':
-        """
-        Convert Value to BooleanValue.
-        """
-        def wrapper(value: str) -> str:
-            """
-            Wrap the value in `toBoolean` function.
-            """
-            return 'toBoolean(%s)' % value
-
-        converted: BooleanValue = self._convert_value(BooleanValue)
-        converted.wrappers.append(wrapper)
-
-        return converted
+    # def to_bool(self) -> 'BooleanValue':
+    #     """
+    #     Convert Value to BooleanValue.
+    #     """
+    #     def wrapper(value: str) -> str:
+    #         """
+    #         Wrap the value in `toBoolean` function.
+    #         """
+    #         return 'toBoolean(%s)' % value
+    #
+    #     converted: BooleanValue = self._convert_value(BooleanValue)
+    #     converted.wrappers.append(wrapper)
+    #
+    #     return converted
 
     def __eq__(self, other: Any) -> Callable[[str], str]:
         return self._comparison_builder(other, '=')
@@ -99,11 +110,11 @@ class Value:
         return self._comparison_builder(other, '>')
 
 
-class BooleanValue(Value):
-    """
-    Represent boolean value.
-    """
-    prop_type = Props.Boolean
+# class BooleanValue(Value):
+#     """
+#     Represent boolean value.
+#     """
+#     prop_type = Props.Boolean
 #
 #
 # class NumericValue(Value):
@@ -112,10 +123,10 @@ class BooleanValue(Value):
 #     """
 #
 #
-# class StringValue(Value):
-#     """
-#     Represent string value.
-#     """
+class StringValue(Value):
+    """
+    Represent string value.
+    """
 #
 #
 # class DateValue(Value):

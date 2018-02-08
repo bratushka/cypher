@@ -3,8 +3,8 @@ Tests for `query.py`.
 """
 # from datetime import date
 from unittest import TestCase
-#
-# from ..props import Props
+
+from ..props import Props
 from ..models import Node
 from ..query import Query
 
@@ -26,7 +26,7 @@ class MatchTests(TestCase):
 
     def test_match_by_class(self):
         """
-        The most simple `match` scenario.
+        The most simple `match` scenario by class.
         """
         class Human(Node):
             """
@@ -40,27 +40,47 @@ class MatchTests(TestCase):
             'RETURN _a'
         )
         self.assertEqual(query, expected)
-#
-#     def test_match_by_instance(self):
-#         """
-#         Match by class + add condition by instance.
-#         """
-#         class Human(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         human = Human(uid='human_uid')
-#
-#         query = Query().match(human).result(no_exec=True)
-#         expected = (
-#             'MATCH (_a:Human)\n'
-#             'WHERE _a.uid = "human_uid"\n'
-#             'RETURN _a'
-#         )
-#         self.assertEqual(query, expected)
-#
+
+    def test_match_type_error(self):
+        """
+        Pass wrong type to match.
+        """
+        class Human:
+            """
+            Example of not Node.
+            """
+            pass
+
+        with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
+            Query().match(Human)
+
+    def test_match_by_instance(self):
+        """
+        Match by instance.
+        """
+        class Human(Node):
+            """
+            Example of Node.
+            """
+            class Meta(Node.Meta):
+                """
+                Example of Node.Meta.
+                """
+                primary_key = 'name'
+
+            name = Props.String()
+
+        human = Human(name='John')
+
+        query = Query().match(human).result(no_exec=True)
+        expected = (
+            'MATCH (_a:Human)\n'
+            'WHERE _a.name = "John"\n'
+            'RETURN _a'
+        )
+        self.assertEqual(query, expected)
+
 #     def test_combined_match_by_class(self):
 #         """
 #         Combination of 2 most simple `match` scenarios.

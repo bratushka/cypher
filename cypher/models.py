@@ -1,7 +1,17 @@
 """
 Objects representing the cypher nodes and edges.
 """
-from typing import Any, Iterable, Mapping, MutableMapping, MutableSet
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    List,
+    Type,
+    Union,
+)
 
 from .props import BaseProp
 
@@ -14,10 +24,11 @@ class Model:
         """
         Meta data for the model.
         """
-        unique_together = ()
-        validations = ()
-        abstract = True
-        database = 'default'
+        primary_key: str = None
+        unique_together: Iterable[str] = ()
+        validations: Iterable[Callable] = ()
+        abstract: bool = True
+        database: str = 'default'
 
     def __init__(self, **kwargs):
         self._labels: MutableSet[str] = {self.__class__.__name__}
@@ -98,3 +109,46 @@ class Edge(Model):
     Pythonic representation of a graph edge.
     """
     pass
+
+
+class ModelDetails:
+    """
+    Organized details of a pattern unit.
+    """
+    __slots__ = ['var', 'type', 'instance']
+
+    def __init__(
+            self,
+            identifier: Union[Edge, Node, Type[Edge], Type[Node]],
+            var: str
+    ):
+        self.var = var
+
+        if isinstance(identifier, (Node, Edge)):
+            self.type = type(identifier)
+            self.instance = identifier
+        elif issubclass(identifier, (Node, Edge)):
+            self.type = identifier
+            self.instance = None
+        else:
+            raise TypeError
+        # self.start: Optional[str] = None
+        # self.end: Optional[str] = None
+        # self.conn: Optional[Tuple[Optional[int], Optional[int]]] = None
+
+    def get_labels(self) -> List[str]:
+        """
+        :return: sorted tuple of labels
+        """
+        if self.instance:
+            return sorted(self.instance.labels)
+        elif self.type is Edge or self.type is Node:
+            return []
+        return [self.type.__name__]
+
+    def get_var_and_labels(self) -> str:
+        """
+        Get a string ready to be used in cypher pattern.
+        Example: `a:Human:Person`.
+        """
+        return ':'.join((self.var, *self.get_labels()))
