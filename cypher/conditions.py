@@ -46,19 +46,6 @@ class Value:
         :param operator: cypher operator to apply
         :return:
         """
-        # def comparison(var: str) -> str:
-        #     """
-        #     Comparison creator.
-        #     """
-        #     return ' '.join((
-        #         functools.reduce(
-        #             lambda value, wrapper: wrapper(value),
-        #             self.wrappers,
-        #             '.'.join((self.var or var, self.prop)),
-        #         ),
-        #         operator,
-        #         self._cypherify_other(other, var),
-        #     ))
         def comparison(details: 'ModelDetails') -> str:
             """
             Comparison creator.

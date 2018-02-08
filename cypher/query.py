@@ -5,6 +5,7 @@ import enum
 import itertools
 import string
 from typing import (
+    Callable,
     Generator,
     Iterable,
     Mapping,
@@ -16,10 +17,12 @@ from typing import (
 )
 
 from .models import Edge, ModelDetails, Node
+from .props import BaseProp
 
 
 Model = Union[Edge, Node]
 Identifier = Union[Model, Type[Model]]
+Comparison = Callable[[ModelDetails, BaseProp], str]
 
 
 def generate_paths() -> Generator[str, None, None]:
@@ -159,6 +162,16 @@ class Query:
         chain = MatchingChain(self.details)
         chain.add_node(var)
         self.chains.append(chain)
+
+        return self
+
+    def where(self, *comparisons: Comparison) -> 'Query':
+        """
+        Add a condition to the matching chain.
+        """
+        chain: MatchingChain = self.chains[-1]
+        for comparison in comparisons:
+            chain.add_condition(comparison)
 
         return self
 

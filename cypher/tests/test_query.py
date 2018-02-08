@@ -117,6 +117,7 @@ class MatchTests(TestCase):
                 Example of Node.Meta.
                 """
                 primary_key = 'name'
+
             name = Props.String()
 
         class Animal(Node):
@@ -137,40 +138,34 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-#     def test_match_by_class_with_comparison(self):
-#         """
-#         Add a `where` to the most simple `match` scenario.
-#         """
-#         # pylint: disable=invalid-name
-#         # This suppresses error for the method name.
-#         # pylint: enable=no-member
-#         class Human(Node):
-#             """
-#             Example of Node.
-#             """
-#             admin = Props.Boolean()
-#             dob = Props.Date()
-#             name = Props.String()
-#
-#         query = Query()\
-#             .match(
-#                 Human,
-#                 # pylint: disable=singleton-comparison
-#                 Human.admin == True,
-#                 # pylint: enable=singleton-comparison
-#                 Human.dob > date(1, 2, 3),
-#                 Human.name @ ['q', 'w', 'e'],
-#             )\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH (_a:Human)\n'
-#             'WHERE _a.admin = true\n'
-#             '  AND _a.dob > 34\n'
-#             '  AND _a.name IN ["q", "w", "e"]\n'
-#             'RETURN _a'
-#         )
-#         self.assertEqual(query, expected)
-#
+    def test_match_by_class_with_comparison(self):
+        """
+        Add a `where` to the most simple `match` scenario.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        class Human(Node):
+            """
+            Example of Node.
+            """
+            admin = Props.Boolean()
+            age = Props.Integer()
+
+        # pylint: disable=singleton-comparison
+        query = Query()\
+            .match(Human)\
+            .where(Human.admin == True, Human.age > 21)\
+            .result(no_exec=True)
+        # pylint: enable=singleton-comparison
+        expected = (
+            'MATCH (_a:Human)\n'
+            'WHERE _a.admin = true\n'
+            '  AND _a.age > 21\n'
+            'RETURN _a'
+        )
+        self.assertEqual(query, expected)
+
 #     def test_match_by_none(self):
 #         """
 #         Match all the nodes.
