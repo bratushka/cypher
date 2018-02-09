@@ -2,7 +2,7 @@
 Conditions for queries.
 """
 import functools
-from typing import Any, Callable, Type
+from typing import Any, Callable, Mapping, Type
 
 
 class Value:
@@ -11,10 +11,12 @@ class Value:
     """
     def __init__(
             self,
+            expr: str = None,
             *,
             prop: 'BaseProp' = None,
             wrappers: Callable[[str], str] = None,
     ):
+        self.expr = expr
         self.prop = prop
         self.wrappers = wrappers or []
 
@@ -37,7 +39,7 @@ class Value:
             self,
             other: Any,
             operator: str,
-    ) -> Callable[['ModelDetails', 'BaseProp'], str]:
+    ) -> Callable[[Mapping[str, 'ModelDetails'], str], str]:
         """
         Build the function that given the variable will return a cypher
         condition.
@@ -46,32 +48,44 @@ class Value:
         :param operator: cypher operator to apply
         :return:
         """
-        def comparison(details: 'ModelDetails') -> str:
+        def comparison(
+                details: Mapping[str, 'ModelDetails'],
+                current_var: str,
+        ) -> str:
             """
             Comparison creator.
             """
-            prop_name = next(
-                name
-                for name in dir(details.type)
-                if getattr(details.type, name) is self.prop
-            )
+            if self.expr:
+                var, prop_name = self.expr.split('.')
+                current_details = details[var]
+                self.prop = getattr(current_details.type, prop_name)
+            else:
+                current_details = details[current_var]
+                prop_name = next(
+                    name
+                    for name in dir(current_details.type)
+                    if getattr(current_details.type, name) is self.prop
+                )
 
             return ' '.join((
                 functools.reduce(
                     lambda value, wrapper: wrapper(value),
                     self.wrappers,
-                    '.'.join((details.var, prop_name)),
+                    '.'.join((current_var, prop_name)),
                 ),
                 operator,
-                self._cypherify_other(other, details.var),
+                self._cypherify_other(other, current_details.var),
             ))
 
         return comparison
 
-    def _convert_value(self, value_type: Type['Value']) -> 'Value':
-        prop = '.'.join((self.var, self.prop)) if self.var else self.prop
-
-        return value_type(prop, wrappers=self.wrappers)
+    # def _convert_value(self, value_type: Type['Value']) -> 'Value':
+    #     # prop = '.'.join((self.var, self.prop)) if self.var else self.prop
+    #     result = value_type(
+    #         expr=self.expr,
+    #         prop=self.prop,
+    #         wrappers=self.wrappers,
+    #     )
 
     # def to_bool(self) -> 'BooleanValue':
     #     """
@@ -112,6 +126,19 @@ class StringValue(Value):
     """
     Represent string value.
     """
+    def lower(self) -> 'StringValue':
+        """
+        Add `toLower` wrapper.
+        """
+        def wrapper(value: str) -> str:
+            """
+            Wrap a string value with `toLower`.
+            """
+            return 'toLower(%s)' % value
+
+        self.wrappers.append(wrapper)
+
+        return self
 #
 #
 # class DateValue(Value):

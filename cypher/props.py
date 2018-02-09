@@ -169,6 +169,12 @@ class Props:
         types = (str,)
         value_type = StringValue
 
+        def lower(self) -> StringValue:
+            """
+            `toLower` wrapper for cypher query.
+            """
+            return self.value_type(prop=self).lower()
+
     class UID(BaseProp):
         """
         Unique ID property.
