@@ -45,8 +45,8 @@ class Model:
             value = kwargs.get(name, prop.default)
 
             if value is not None:
-                normalized = prop.normalize(value)
-                prop.validate(normalized)
+                normalized = prop.value_type.normalize(value)
+                prop.value_type.validate(normalized)
                 setattr(self, name, normalized)
             elif value is None and not prop.required:
                 setattr(self, name, None)
