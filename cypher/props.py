@@ -36,11 +36,11 @@ class BaseProp:
         """
         return self._default()
 
-    # def __eq__(self, other):
-    #     return self.value_type(prop=self) == other
-    #
-    # def __gt__(self, other):
-    #     return self.value_type(prop=self) > other
+    def __eq__(self, other):
+        return self.value_type(prop=self) == other
+
+    def __gt__(self, other):
+        return self.value_type(prop=self) > other
 
 
 class Props:

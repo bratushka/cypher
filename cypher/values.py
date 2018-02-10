@@ -2,12 +2,15 @@
 Conditions for queries.
 """
 import json
+import functools
 from datetime import date, datetime
 
-from typing import Any, TypeVar, Union
+from typing import Any, Callable, Mapping, Type, TypeVar, Union
 
 
 T = TypeVar('T')
+SomeValue = TypeVar('SomeValue', bound='Value')
+Comparison = Callable[[Mapping[str, 'ModelDetails'], str], str]
 
 
 class Value:
@@ -16,6 +19,17 @@ class Value:
     """
     types = (object,)
     constraints = ()
+
+    def __init__(
+            self,
+            expr: str = None,
+            *,
+            prop: 'BaseProp' = None,
+            wrappers: Callable[[str], str] = None,
+    ):
+        self.expr = expr
+        self.prop = prop
+        self.wrappers = wrappers or []
 
     @classmethod
     def validate_type(cls, value: Any):
@@ -87,6 +101,93 @@ class Value:
         :return: transformed value
         """
         return value
+
+    def _cypherify_other(self, other: Any, var: str) -> str:
+        """
+        Transform python object into string.
+
+        :param other: value to compare with
+        :return: cypherified value
+        """
+        if isinstance(other, Value):
+            return '%s.%s' % (other.var or var, other.prop)
+
+        value_type = self.prop.value_type
+        other = value_type.normalize(other)
+        value_type.validate(other)
+
+        return value_type.to_cypher_value(other)
+
+    def _comparison_builder(self, other: Any, operator: str,) -> Comparison:
+        """
+        Build the function that given the variable will return a cypher
+        condition.
+
+        :param other: value to compare with
+        :param operator: cypher operator to apply
+        :return:
+        """
+        def comparison(
+                details: Mapping[str, 'ModelDetails'],
+                current_var: str,
+        ) -> str:
+            """
+            Comparison creator.
+            """
+            if self.expr:
+                var, prop_name = self.expr.split('.')
+                current_details = details[var]
+                self.prop = getattr(current_details.type, prop_name)
+            else:
+                current_details = details[current_var]
+                prop_name = next(
+                    name
+                    for name in dir(current_details.type)
+                    if getattr(current_details.type, name) is self.prop
+                )
+
+            return ' '.join((
+                functools.reduce(
+                    lambda value, wrapper: wrapper(value),
+                    self.wrappers,
+                    '.'.join((current_var, prop_name)),
+                ),
+                operator,
+                self._cypherify_other(other, current_details.var),
+            ))
+
+        return comparison
+
+    def _convert_value(self, value_type: Type[SomeValue]) -> SomeValue:
+        """
+        :return: instance of `value_type` with same data as `self`.
+        """
+        return value_type(
+            expr=self.expr,
+            prop=self.prop,
+            wrappers=self.wrappers,
+        )
+
+    # def to_bool(self) -> 'BooleanValue':
+    #     """
+    #     Convert Value to BooleanValue.
+    #     """
+    #     def wrapper(value: str) -> str:
+    #         """
+    #         Wrap the value in `toBoolean` function.
+    #         """
+    #         return 'toBoolean(%s)' % value
+    #
+    #     converted: BooleanValue = self._convert_value(BooleanValue)
+    #     converted.wrappers.append(wrapper)
+    #
+    #     return converted
+
+    def __eq__(self, other: Any) -> Comparison:
+        return self._comparison_builder(other, '=')
+
+    def __gt__(self, other: Any) -> Comparison:
+        return self._comparison_builder(other, '>')
 
 
 class Boolean(Value):

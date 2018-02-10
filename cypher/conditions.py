@@ -59,8 +59,6 @@ class Value:
                 var, prop_name = self.expr.split('.')
                 current_details = details[var]
                 self.prop = getattr(current_details.type, prop_name)
-
-                # value =
             else:
                 current_details = details[current_var]
                 prop_name = next(

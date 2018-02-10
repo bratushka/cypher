@@ -104,8 +104,7 @@ class MatchingChain(Chain):
         """
         Add a condition to the query.
         """
-        last_element = self.details[self.elements[-1]]
-        self.conditions.append(comparison(last_element))
+        self.conditions.append(comparison(self.details, self.elements[-1]))
 
     def __str__(self) -> str:
         """
