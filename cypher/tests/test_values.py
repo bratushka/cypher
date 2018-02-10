@@ -21,7 +21,7 @@ DETAILS = {
 }
 
 
-class ValuesTests(TestCase):
+class ValueTests(TestCase):
     """
     Tests for the Values class.
     """
@@ -111,6 +111,14 @@ class ValuesTests(TestCase):
         expected = 'toBoolean(a.job) = true'
         self.assertEqual(actual, expected)
 
+    def test_to_str(self):
+        """
+        Test equality to a string value.
+        """
+        actual = (values.Value('a.job').to_str() == 'developer')(DETAILS, 'a')
+        expected = 'toString(a.job) = "developer"'
+        self.assertEqual(actual, expected)
+
     def test_eq(self):
         """
         Test equality to a string value.
@@ -127,37 +135,55 @@ class ValuesTests(TestCase):
         expected = 'a.job = "Developer"'
         self.assertEqual(actual, expected)
 
-# - User.job == 'Developer'
-# - Value('a.job') == 'Developer'
-# - 'a.job = "Developer"'
-#
-# User.job == User.title
-# User.job == Value('a.title')
-# Value('a.job') == User.title
-# Value('a.job') == Value('a.title')
-# 'a.job = a.title'
-#
-# User.job.lower() == User.title
-# User.job.lower() == Value('a.title')
-# Value('a.job').lower() == User.title
-# Value('a.job').lower() == Value('a.title')
-# 'toLower(a.job) = a.title'
-#
-# User.job.toLower() == 'Developer'
-# Value('a.job').toLower() == 'Developer'
-# 'toLower(a.job) = "Developer"'
-#
-# User.job == User.title.lower()
-# User.job == Value('a.title').lower()
-# Value('a.job') == User.title.lower()
-# Value('a.job') == Value('a.title').lower()
-# 'a.job = toLower(a.title)'
-#
-# User.job.lower() == User.title.lower()
-# User.job.lower() == Value('a.title').lower()
-# Value('a.job').lower() == User.title.lower()
-# Value('a.job').lower() == Value('a.title').lower()
-# 'toLower(a.job) = toLower(a.title)'
+        comparisons = (
+            User.job == User.title,
+            User.job == values.Value('a.title'),
+            values.Value('a.job') == User.title,
+            values.Value('a.job') == values.Value('a.title'),
+        )
+        expected = 'a.job = a.title'
+        for comparison in comparisons:
+            self.assertEqual(comparison(DETAILS, 'a'), expected)
+
+        comparisons = (
+            User.job.lower() == User.title,
+            User.job.lower() == values.Value('a.title'),
+            values.String('a.job').lower() == User.title,
+            values.String('a.job').lower() == values.Value('a.title'),
+        )
+        expected = 'toLower(a.job) = a.title'
+        for comparison in comparisons:
+            self.assertEqual(comparison(DETAILS, 'a'), expected)
+
+        comparisons = (
+            User.job.lower() == User.title,
+            User.job.lower() == values.Value('a.title'),
+            values.String('a.job').lower() == User.title,
+            values.String('a.job').lower() == values.Value('a.title'),
+        )
+        expected = 'toLower(a.job) = a.title'
+        for comparison in comparisons:
+            self.assertEqual(comparison(DETAILS, 'a'), expected)
+
+        comparisons = (
+            User.job == User.title.lower(),
+            User.job == values.String('a.title').lower(),
+            values.String('a.job') == User.title.lower(),
+            values.String('a.job') == values.String('a.title').lower(),
+        )
+        expected = 'a.job = toLower(a.title)'
+        for comparison in comparisons:
+            self.assertEqual(comparison(DETAILS, 'a'), expected)
+
+        comparisons = (
+            User.job.lower() == User.title.lower(),
+            User.job.lower() == values.String('a.title').lower(),
+            values.String('a.job').lower() == User.title.lower(),
+            values.String('a.job').lower() == values.String('a.title').lower(),
+        )
+        expected = 'toLower(a.job) = toLower(a.title)'
+        for comparison in comparisons:
+            self.assertEqual(comparison(DETAILS, 'a'), expected)
 
 
 class BooleanTests(TestCase):
