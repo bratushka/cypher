@@ -101,7 +101,17 @@ class ValuesTests(TestCase):
         for example in examples:
             self.assertIs(example, SomeValue.to_python_value(example))
 
-    def test_eq_to_string(self):
+    def test_to_bool(self):
+        """
+        Test equality to a boolean value.
+        """
+        # pylint: disable=singleton-comparison
+        actual = (values.Value('a.job').to_bool() == True)(DETAILS, 'a')
+        # pylint: enable=singleton-comparison
+        expected = 'toBoolean(a.job) = true'
+        self.assertEqual(actual, expected)
+
+    def test_eq(self):
         """
         Test equality to a string value.
         """
@@ -117,15 +127,37 @@ class ValuesTests(TestCase):
         expected = 'a.job = "Developer"'
         self.assertEqual(actual, expected)
 
-        # pylint: disable=singleton-comparison
-        actual = (values.Value('a.job').to_bool() == True)(DETAILS, 'a')
-        # pylint: enable=singleton-comparison
-        expected = 'toBoolean(a.job) = true'
-        self.assertEqual(actual, expected)
-
-        actual = (values.String('a.job').lower() == 'Developer')(DETAILS, 'a')
-        expected = 'toLower(a.job) = "Developer"'
-        self.assertEqual(actual, expected)
+# - User.job == 'Developer'
+# - Value('a.job') == 'Developer'
+# - 'a.job = "Developer"'
+#
+# User.job == User.title
+# User.job == Value('a.title')
+# Value('a.job') == User.title
+# Value('a.job') == Value('a.title')
+# 'a.job = a.title'
+#
+# User.job.lower() == User.title
+# User.job.lower() == Value('a.title')
+# Value('a.job').lower() == User.title
+# Value('a.job').lower() == Value('a.title')
+# 'toLower(a.job) = a.title'
+#
+# User.job.toLower() == 'Developer'
+# Value('a.job').toLower() == 'Developer'
+# 'toLower(a.job) = "Developer"'
+#
+# User.job == User.title.lower()
+# User.job == Value('a.title').lower()
+# Value('a.job') == User.title.lower()
+# Value('a.job') == Value('a.title').lower()
+# 'a.job = toLower(a.title)'
+#
+# User.job.lower() == User.title.lower()
+# User.job.lower() == Value('a.title').lower()
+# Value('a.job').lower() == User.title.lower()
+# Value('a.job').lower() == Value('a.title').lower()
+# 'toLower(a.job) = toLower(a.title)'
 
 
 class BooleanTests(TestCase):
@@ -208,6 +240,14 @@ class StringTests(TestCase):
         for cls in (int, float, bool):
             with self.assertRaises(TypeError):
                 values.String.validate(cls('1'))
+
+    def test_lower(self):
+        """
+        Test `lower` method.
+        """
+        actual = (values.String('a.job').lower() == 'Developer')(DETAILS, 'a')
+        expected = 'toLower(a.job) = "Developer"'
+        self.assertEqual(actual, expected)
 
 
 class DateTests(TestCase):
