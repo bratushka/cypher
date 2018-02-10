@@ -71,11 +71,11 @@ class Props:
         """
         value_type = values.String
 
-        # def lower(self) -> StringValue:
-        #     """
-        #     `toLower` wrapper for cypher query.
-        #     """
-        #     return self.value_type(prop=self).lower()
+        def lower(self) -> values.String:
+            """
+            `toLower` wrapper for cypher query.
+            """
+            return self.value_type(prop=self).lower()
 
     class Date(BaseProp):
         """

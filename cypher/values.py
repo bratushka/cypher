@@ -102,7 +102,7 @@ class Value:
         """
         return value
 
-    def _cypherify_other(self, other: Any, var: str) -> str:
+    def _cypherify_other(self, other: Any) -> str:
         """
         Transform python object into string.
 
@@ -110,13 +110,12 @@ class Value:
         :return: cypherified value
         """
         if isinstance(other, Value):
-            return '%s.%s' % (other.var or var, other.prop)
+            raise NotImplementedError
 
-        value_type = self.prop.value_type
-        other = value_type.normalize(other)
-        value_type.validate(other)
+        other = self.normalize(other)
+        self.validate(other)
 
-        return value_type.to_cypher_value(other)
+        return self.to_cypher_value(other)
 
     def _comparison_builder(self, other: Any, operator: str,) -> Comparison:
         """
@@ -153,7 +152,7 @@ class Value:
                     '.'.join((current_var, prop_name)),
                 ),
                 operator,
-                self._cypherify_other(other, current_details.var),
+                self._cypherify_other(other),
             ))
 
         return comparison
@@ -162,26 +161,27 @@ class Value:
         """
         :return: instance of `value_type` with same data as `self`.
         """
+        # noinspection PyCallingNonCallable
         return value_type(
             expr=self.expr,
             prop=self.prop,
             wrappers=self.wrappers,
         )
 
-    # def to_bool(self) -> 'BooleanValue':
-    #     """
-    #     Convert Value to BooleanValue.
-    #     """
-    #     def wrapper(value: str) -> str:
-    #         """
-    #         Wrap the value in `toBoolean` function.
-    #         """
-    #         return 'toBoolean(%s)' % value
-    #
-    #     converted: BooleanValue = self._convert_value(BooleanValue)
-    #     converted.wrappers.append(wrapper)
-    #
-    #     return converted
+    def to_bool(self) -> 'Boolean':
+        """
+        Convert Value to Boolean.
+        """
+        def wrapper(value: str) -> str:
+            """
+            Wrap the value in `toBoolean` function.
+            """
+            return 'toBoolean(%s)' % value
+
+        converted: Boolean = self._convert_value(Boolean)
+        converted.wrappers.append(wrapper)
+
+        return converted
 
     def __eq__(self, other: Any) -> Comparison:
         return self._comparison_builder(other, '=')
@@ -240,6 +240,20 @@ class String(Value):
     Represent string value.
     """
     types = (str,)
+
+    def lower(self) -> 'String':
+        """
+        Add `toLower` wrapper.
+        """
+        def wrapper(value: str) -> str:
+            """
+            Wrap a string value with `toLower`.
+            """
+            return 'toLower(%s)' % value
+
+        self.wrappers.append(wrapper)
+
+        return self
 
 
 class Date(Value):

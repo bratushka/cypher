@@ -4,7 +4,21 @@ Tests for `values.py`.
 from datetime import date, datetime
 from unittest import TestCase
 
-from .. import values
+from .. import models, values
+from ..props import Props
+
+
+class User(models.Node):
+    """
+    Example of a Node.
+    """
+    job = Props.String()
+    title = Props.String()
+
+
+DETAILS = {
+    'a': models.ModelDetails(User, 'a'),
+}
 
 
 class ValuesTests(TestCase):
@@ -86,6 +100,32 @@ class ValuesTests(TestCase):
         examples = [True, 1, 1., 'string']
         for example in examples:
             self.assertIs(example, SomeValue.to_python_value(example))
+
+    def test_eq_to_string(self):
+        """
+        Test equality to a string value.
+        """
+        actual = (User.job == 'some"nameЖ')(DETAILS, 'a')
+        expected = 'a.job = "some\\"nameЖ"'
+        self.assertEqual(actual, expected)
+
+        actual = (User.job.lower() == 'some"nameЖ')(DETAILS, 'a')
+        expected = 'toLower(a.job) = "some\\"nameЖ"'
+        self.assertEqual(actual, expected)
+
+        actual = (values.Value('a.job') == 'Developer')(DETAILS, 'a')
+        expected = 'a.job = "Developer"'
+        self.assertEqual(actual, expected)
+
+        # pylint: disable=singleton-comparison
+        actual = (values.Value('a.job').to_bool() == True)(DETAILS, 'a')
+        # pylint: enable=singleton-comparison
+        expected = 'toBoolean(a.job) = true'
+        self.assertEqual(actual, expected)
+
+        actual = (values.String('a.job').lower() == 'Developer')(DETAILS, 'a')
+        expected = 'toLower(a.job) = "Developer"'
+        self.assertEqual(actual, expected)
 
 
 class BooleanTests(TestCase):
