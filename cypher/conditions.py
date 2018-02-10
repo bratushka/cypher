@@ -2,7 +2,11 @@
 Conditions for queries.
 """
 import functools
-from typing import Any, Callable, Mapping, Type
+from typing import Any, Callable, Mapping, Type, TypeVar
+
+
+SomeValue = TypeVar('SomeValue', bound='Value')
+Comparison = Callable[[Mapping[str, 'ModelDetails'], str], str]
 
 
 class Value:
@@ -35,11 +39,7 @@ class Value:
 
         return self.prop.to_cypher_value(other)
 
-    def _comparison_builder(
-            self,
-            other: Any,
-            operator: str,
-    ) -> Callable[[Mapping[str, 'ModelDetails'], str], str]:
+    def _comparison_builder(self, other: Any, operator: str,) -> Comparison:
         """
         Build the function that given the variable will return a cypher
         condition.
@@ -59,6 +59,8 @@ class Value:
                 var, prop_name = self.expr.split('.')
                 current_details = details[var]
                 self.prop = getattr(current_details.type, prop_name)
+
+                # value =
             else:
                 current_details = details[current_var]
                 prop_name = next(
@@ -79,43 +81,44 @@ class Value:
 
         return comparison
 
-    # def _convert_value(self, value_type: Type['Value']) -> 'Value':
-    #     # prop = '.'.join((self.var, self.prop)) if self.var else self.prop
-    #     result = value_type(
-    #         expr=self.expr,
-    #         prop=self.prop,
-    #         wrappers=self.wrappers,
-    #     )
+    def _convert_value(self, value_type: Type[SomeValue]) -> SomeValue:
+        """
+        :return: instance of `value_type` with same data as `self`.
+        """
+        return value_type(
+            expr=self.expr,
+            prop=self.prop,
+            wrappers=self.wrappers,
+        )
 
-    # def to_bool(self) -> 'BooleanValue':
-    #     """
-    #     Convert Value to BooleanValue.
-    #     """
-    #     def wrapper(value: str) -> str:
-    #         """
-    #         Wrap the value in `toBoolean` function.
-    #         """
-    #         return 'toBoolean(%s)' % value
-    #
-    #     converted: BooleanValue = self._convert_value(BooleanValue)
-    #     converted.wrappers.append(wrapper)
-    #
-    #     return converted
+    def to_bool(self) -> 'BooleanValue':
+        """
+        Convert Value to BooleanValue.
+        """
+        def wrapper(value: str) -> str:
+            """
+            Wrap the value in `toBoolean` function.
+            """
+            return 'toBoolean(%s)' % value
 
-    def __eq__(self, other: Any) -> Callable[[str], str]:
+        converted: BooleanValue = self._convert_value(BooleanValue)
+        converted.wrappers.append(wrapper)
+
+        return converted
+
+    def __eq__(self, other: Any) -> Comparison:
         return self._comparison_builder(other, '=')
 
-    def __gt__(self, other: Any) -> Callable[[str], str]:
-        return self._comparison_builder(other, '>')
+    # def __gt__(self, other: Any) -> Comparison:
+    #     return self._comparison_builder(other, '>')
 
 
-# class BooleanValue(Value):
-#     """
-#     Represent boolean value.
-#     """
-#     prop_type = Props.Boolean
-#
-#
+class BooleanValue(Value):
+    """
+    Represent boolean value.
+    """
+
+
 # class NumericValue(Value):
 #     """
 #     Represent numeric value.
