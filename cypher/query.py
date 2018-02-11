@@ -12,6 +12,7 @@ from typing import (
     MutableMapping,
     List,
     Optional,
+    Tuple,
     Type,
     Union,
 )
@@ -139,13 +140,36 @@ class MatchingChain(Chain):
                 else:
                     start = self.elements[i * 2]
 
-                paths.append('MATCH %s = (%s)%s-[%s]-%s(%s)' % (
+                edge_index = i * 2 + 1
+                edge_details = self.details[self.elements[edge_index]]
+                if edge_details.conn is None:
+                    edge = edge_details.get_var_and_labels()
+                    rels_var = ''
+                else:
+                    if edge_details.conn == (None, None):
+                        length = '*'
+                    else:
+                        length = '*{}..{}'.format(
+                            edge_details.conn[0] or '',
+                            edge_details.conn[1] or '',
+                        )
+
+                    label = ':'.join(('', *edge_details.get_labels()))
+                    edge = ' '.join((label, length)).strip()
+                    # noinspection SqlNoDataSourceInspection
+                    rels_var = '\nWITH *, relationships(%s) as %s' % (
+                        self.paths[i],
+                        edge_details.var,
+                    )
+
+                paths.append('MATCH %s = (%s)%s-[%s]-%s(%s)%s' % (
                     self.paths[i],
                     start,
                     '<' if self.directions[i] == Direction.BACK else '',
-                    self.details[self.elements[i * 2 + 1]].get_var_and_labels(),
+                    edge,
                     '>' if self.directions[i] == Direction.FRONT else '',
                     self.details[self.elements[i * 2 + 2]].get_var_and_labels(),
+                    rels_var,
                 ))
             query = '\n'.join(paths)
 
@@ -171,13 +195,14 @@ class Query:
             self,
             identifier: Identifier,
             var: Optional[str],
+            conn: Tuple[Optional[int], Optional[int]] = None,
     ) -> str:
         """
         Generate a variable if needed and add a ModelDetails instance to
         `details` property.
         """
         var = var or next(self.var_generator)
-        self.details[var] = ModelDetails(identifier, var)
+        self.details[var] = ModelDetails(identifier, var, conn)
 
         return var
 
@@ -202,11 +227,12 @@ class Query:
             self,
             identifier: Union[Type[Edge], Edge, None],
             var: str = None,
+            conn: Tuple[Optional[int], Optional[int]] = None,
     ) -> 'Query':
         """
         Add an Edge to the `MatchingChain`.
         """
-        var = self._add_details(identifier or Edge, var)
+        var = self._add_details(identifier or Edge, var, conn)
         self.output.append(var)
 
         chain: MatchingChain = self.chains[-1]

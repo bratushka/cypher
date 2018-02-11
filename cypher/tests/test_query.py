@@ -257,34 +257,46 @@ class MatchTests(TestCase):
 
         self.assertEqual(query, expected)
 
-#     def test_connected_through_with_connection_length(self):
-#         """
-#         Pass `conn` argument to the `connected_through` method.
-#         """
-#         # pylint: disable=invalid-name
-#         # This suppresses error for the method name.
-#         # pylint: enable=no-member
-#         class User(Node):
-#             """
-#             Example of Node.
-#             """
-#
-#         class Knows(Edge):
-#             """
-#             Example of edge.
-#             """
-#
-#         query = Query()\
-#             .match(User)\
-#             .connected_through(Knows, conn=(1, 3))\
-#             .with_(User)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH _p1 = (_a:User)-[:Knows *1..3]-(_c:User)\n'
-#             'WITH *, relationships(_p1) as _b\n'
-#             'RETURN _a, _b, _c'
-#         )
-#         self.assertEqual(query, expected)
+    def test_connected_through_with_connection_length(self):
+        """
+        Pass `conn` argument to the `connected_through` method.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        class User(Node):
+            """
+            Example of Node.
+            """
+
+        class Knows(Edge):
+            """
+            Example of edge.
+            """
+
+        query = Query()\
+            .match(User)\
+            .connected_through(Knows, conn=(None, None))\
+            .with_(User)\
+            .connected_through(None, conn=(None, 3))\
+            .with_(User)\
+            .connected_through(Knows, conn=(3, None))\
+            .with_(User)\
+            .connected_through(None, conn=(1, 3))\
+            .with_(User)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a:User)-[:Knows *]-(_c:User)\n'
+            'WITH *, relationships(_p1) as _b\n'
+            'MATCH _p2 = (_c)-[*..3]-(_e:User)\n'
+            'WITH *, relationships(_p2) as _d\n'
+            'MATCH _p3 = (_e)-[:Knows *3..]-(_g:User)\n'
+            'WITH *, relationships(_p3) as _f\n'
+            'MATCH _p4 = (_g)-[*1..3]-(_i:User)\n'
+            'WITH *, relationships(_p4) as _h\n'
+            'RETURN _a, _b, _c, _d, _e, _f, _g, _h, _i'
+        )
+        self.assertEqual(query, expected)
 #
 #
 # # class MegaTests(TestCase):

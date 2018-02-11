@@ -9,6 +9,8 @@ from typing import (
     MutableMapping,
     MutableSet,
     List,
+    Optional,
+    Tuple,
     Type,
     Union,
 )
@@ -115,12 +117,13 @@ class ModelDetails:
     """
     Organized details of a pattern unit.
     """
-    __slots__ = ['var', 'type', 'instance']
+    __slots__ = ['var', 'type', 'instance', 'conn']
 
     def __init__(
             self,
             identifier: Union[Edge, Node, Type[Edge], Type[Node]],
-            var: str
+            var: str,
+            conn: Tuple[Optional[int], Optional[int]] = None,
     ):
         self.var = var
 
@@ -134,7 +137,7 @@ class ModelDetails:
             raise TypeError
         # self.start: Optional[str] = None
         # self.end: Optional[str] = None
-        # self.conn: Optional[Tuple[Optional[int], Optional[int]]] = None
+        self.conn = conn
 
     def get_labels(self) -> List[str]:
         """
