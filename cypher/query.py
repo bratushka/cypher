@@ -74,12 +74,22 @@ class MatchingChain(Chain):
         super().__init__(details)
 
         self.directions: List[Direction] = []
+        self.paths: List[str] = []
         self.conditions: List[str] = []
 
     def _check_pattern_integrity(self):
         """
         Check if the pattern is valid.
         """
+
+    def _add_instance_filter(self, model: ModelDetails):
+        """
+        Add filtering by `primary_key`.
+        """
+        prop_name = model.type.Meta.primary_key
+        prop = getattr(model.type, prop_name)
+        value = getattr(model.instance, prop_name)
+        self.add_condition(prop == value)
 
     def add_node(self, var: str, direction: Direction = None):
         """
@@ -90,15 +100,22 @@ class MatchingChain(Chain):
 
         model = self.details[var]
         if model.instance is not None:
-            prop_name = model.type.Meta.primary_key
-            prop = getattr(model.type, prop_name)
-            value = getattr(model.instance, prop_name)
-            self.add_condition(prop == value)
+            self._add_instance_filter(model)
 
         self._check_pattern_integrity()
 
-    # def add_edge(self):
-    #     pass
+    def add_edge(self, var: str, path: str):
+        """
+        Add an edge to the matching pattern.
+        """
+        self.elements.append(var)
+        self.paths.append(path)
+
+        model = self.details[var]
+        if model.instance is not None:
+            self._add_instance_filter(model)
+
+        self._check_pattern_integrity()
 
     def add_condition(self, comparison):
         """
@@ -110,11 +127,26 @@ class MatchingChain(Chain):
         """
         Stringify the chain.
         """
-        query = ''
-
         if len(self.elements) == 1:
             element = self.elements[0]
             query = 'MATCH (%s)' % self.details[element].get_var_and_labels()
+        else:
+            paths = []
+            for i in range(len(self.paths)):
+                if i == 0:
+                    start = self.details[self.elements[0]].get_var_and_labels()
+                else:
+                    start = self.elements[i * 2]
+
+                paths.append('MATCH %s = (%s)%s-[%s]-%s(%s)' % (
+                    self.paths[i],
+                    start,
+                    '<' if self.directions[i] == Direction.BACK else '',
+                    self.details[self.elements[i * 2 + 1]].get_var_and_labels(),
+                    '>' if self.directions[i] == Direction.FRONT else '',
+                    self.details[self.elements[i * 2 + 2]].get_var_and_labels(),
+                ))
+            query = '\n'.join(paths)
 
         if self.conditions:
             conditions = '\nWHERE ' + '\n  AND '.join(self.conditions)
@@ -129,6 +161,7 @@ class Query:
     """
     def __init__(self):
         self.var_generator = generate_variables()
+        self.path_generator = generate_paths()
         self.chains: List[Chain] = []
         self.details: MutableMapping[str, ModelDetails] = {}
         self.output: List[str] = []
@@ -149,7 +182,7 @@ class Query:
 
     def match(
             self,
-            identifier: Optional[Identifier],
+            identifier: Union[Type[Node], Node, None],
             var: str = None,
     ) -> 'Query':
         """
@@ -161,6 +194,38 @@ class Query:
         chain = MatchingChain(self.details)
         chain.add_node(var)
         self.chains.append(chain)
+
+        return self
+
+    def connected_through(
+            self,
+            identifier: Union[Type[Edge], Edge, None],
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add an Edge to the `MatchingChain`.
+        """
+        var = self._add_details(identifier or Edge, var)
+        self.output.append(var)
+
+        chain: MatchingChain = self.chains[-1]
+        chain.add_edge(var, next(self.path_generator))
+
+        return self
+
+    def with_(
+            self,
+            identifier: Union[Type[Node], Node, None],
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node to the `MatchingChain`.
+        """
+        var = self._add_details(identifier or Node, var)
+        self.output.append(var)
+
+        chain: MatchingChain = self.chains[-1]
+        chain.add_node(var)
 
         return self
 

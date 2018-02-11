@@ -5,7 +5,7 @@ Tests for `query.py`.
 from unittest import TestCase
 
 from ..props import Props
-from ..models import Node
+from ..models import Edge, Node
 from ..query import Query
 
 
@@ -181,21 +181,34 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-#     def test_match_path_no_direction(self):
-#         """
-#         Match a path with front or back direction.
-#         """
-#         query = Query()\
-#             .match(None)\
-#             .connected_through(None)\
-#             .with_(None)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH _p1 = (_a)-[_b]-(_c)\n'
-#             'RETURN _a, _b, _c'
-#         )
-#         self.assertEqual(query, expected)
-#
+    def test_match_path_no_direction(self):
+        """
+        Match a path with front or back direction.
+        """
+        class Human(Node):
+            """
+            Example of Node.
+            """
+
+        class Knows(Edge):
+            """
+            Example of Edge.
+            """
+
+        query = Query()\
+            .match(None)\
+            .connected_through(Knows)\
+            .with_(Human)\
+            .connected_through(None)\
+            .with_(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)-[_b:Knows]-(_c:Human)\n'
+            'MATCH _p2 = (_c)-[_d]-(_e)\n'
+            'RETURN _a, _b, _c, _d, _e'
+        )
+        self.assertEqual(query, expected)
+
 #     def test_match_path_back_direction(self):
 #         """
 #         Match a path with back direction.
