@@ -95,8 +95,9 @@ class MatchingChain(Chain):
         """
         Add a node to the matching pattern.
         """
-        self.directions.append(direction)
         self.elements.append(var)
+        if direction is not None:
+            self.directions.append(direction)
 
         model = self.details[var]
         if model.instance is not None:
@@ -213,21 +214,55 @@ class Query:
 
         return self
 
+    def _by_to_with(
+            self,
+            direction: Direction,
+            identifier: Union[Type[Node], Node, None],
+            var: str = None,
+    ) -> 'Query':
+        var = self._add_details(identifier or Node, var)
+        self.output.append(var)
+
+        chain: MatchingChain = self.chains[-1]
+        chain.add_node(var, direction)
+
+        return self
+
     def with_(
             self,
             identifier: Union[Type[Node], Node, None],
             var: str = None,
     ) -> 'Query':
         """
-        Add a Node to the `MatchingChain`.
+        Add a Node to the `MatchingChain`. Direction undefined.
         """
-        var = self._add_details(identifier or Node, var)
-        self.output.append(var)
+        return self._by_to_with(Direction.NONE, identifier, var)
 
-        chain: MatchingChain = self.chains[-1]
-        chain.add_node(var)
+    def by(
+            self,
+            identifier: Union[Type[Node], Node, None],
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node to the `MatchingChain`. Direction: back.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        return self._by_to_with(Direction.BACK, identifier, var)
 
-        return self
+    def to(
+            self,
+            identifier: Union[Type[Node], Node, None],
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node to the `MatchingChain`. Direction: front.
+        """
+        # pylint: disable=invalid-name
+        # This suppresses error for the method name.
+        # pylint: enable=no-member
+        return self._by_to_with(Direction.FRONT, identifier, var)
 
     def where(self, *comparisons: Comparison) -> 'Query':
         """
