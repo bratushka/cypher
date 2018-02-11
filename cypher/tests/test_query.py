@@ -166,20 +166,20 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-    # def test_defined_result(self):
-    #     """
-    #     Pass variables to the `result` method.
-    #     """
-    #     query = Query()\
-    #         .match((None, 'a'))\
-    #         .match(None)\
-    #         .result('a', no_exec=True)
-    #     expected = (
-    #         'MATCH (a)\n'
-    #         'MATCH (_a)\n'
-    #         'RETURN a'
-    #     )
-    #     self.assertEqual(query, expected)
+    def test_defined_result(self):
+        """
+        Pass variables to the `result` method.
+        """
+        query = Query()\
+            .match(None, 'a')\
+            .match(None)\
+            .result('a', no_exec=True)
+        expected = (
+            'MATCH (a)\n'
+            'MATCH (_a)\n'
+            'RETURN a'
+        )
+        self.assertEqual(query, expected)
 
 #     def test_match_path_no_direction(self):
 #         """

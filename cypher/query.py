@@ -176,13 +176,13 @@ class Query:
 
     def result(
             self,
-            *,
+            *output,
             no_exec: bool = False,
     ) -> Iterable:
         """
         Execute the query and map the results.
         """
-        output = 'RETURN %s' % ', '.join(self.output)
+        output = 'RETURN %s' % ', '.join(output or self.output)
         query = '\n'.join((*map(str, self.chains), output))
 
         if no_exec:
