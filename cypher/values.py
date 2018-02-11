@@ -102,59 +102,6 @@ class Value:
         """
         return value
 
-    def _cypherify_other(
-            self,
-            other: Any,
-            details: Mapping[str, 'ModelDetails'],
-            current_var: str,
-    ) -> str:
-        """
-        Transform python object into string.
-
-        :param other: value to compare with
-        :return: cypherified value
-        """
-        # pylint: disable=cyclic-import
-        from .props import BaseProp
-        # pylint: enable=cyclic-import
-
-        if isinstance(other, BaseProp):
-            other_value = other.value_type(prop=other)
-            return other_value.as_query_value(details, current_var)
-        elif isinstance(other, Value):
-            return other.as_query_value(details, current_var)
-
-        other = self.normalize(other)
-        self.validate(other)
-
-        return self.to_cypher_value(other)
-
-    def as_query_value(
-            self,
-            details: Mapping[str, 'ModelDetails'],
-            current_var: str,
-    ) -> str:
-        """
-        :return: a cypher representation of value with wrappers.
-        """
-        if self.expr:
-            var, prop_name = self.expr.split('.')
-            current_details = details[var]
-            self.prop = getattr(current_details.type, prop_name)
-        else:
-            current_details = details[current_var]
-            prop_name = next(
-                name
-                for name in dir(current_details.type)
-                if getattr(current_details.type, name) is self.prop
-            )
-
-        return functools.reduce(
-            lambda value, wrapper: wrapper(value),
-            self.wrappers,
-            '.'.join((current_var, prop_name)),
-        )
-
     def _comparison_builder(self, other: Any, operator: str) -> Comparison:
         """
         Build the function that given the variable will return a cypher
@@ -171,10 +118,54 @@ class Value:
             """
             Comparison creator.
             """
+            def as_query_value(value: 'Value') -> str:
+                """
+                :return: a cypher representation of value with wrappers.
+                """
+                if value.expr:
+                    var, prop_name = value.expr.split('.')
+                    current_details = details[var]
+                    value.prop = getattr(current_details.type, prop_name)
+                else:
+                    current_details = details[current_var]
+                    prop_name = next(
+                        name
+                        for name in dir(current_details.type)
+                        if getattr(current_details.type, name) is value.prop
+                    )
+
+                return functools.reduce(
+                    lambda result, wrapper: wrapper(result),
+                    value.wrappers,
+                    '.'.join((current_var, prop_name)),
+                )
+
+            def cypherify_other(value: Any) -> str:
+                """
+                Transform python object into string.
+
+                :param value: value to compare with
+                :return: cypherified value
+                """
+                # pylint: disable=cyclic-import
+                from .props import BaseProp
+                # pylint: enable=cyclic-import
+
+                if isinstance(value, BaseProp):
+                    other_value = value.value_type(prop=value)
+                    return as_query_value(other_value)
+                elif isinstance(value, Value):
+                    return as_query_value(value)
+
+                value = self.normalize(value)
+                self.validate(value)
+
+                return self.to_cypher_value(value)
+
             return ' '.join((
-                self.as_query_value(details, current_var),
+                as_query_value(self),
                 operator,
-                self._cypherify_other(other, details, current_var),
+                cypherify_other(other),
             ))
 
         return comparison
