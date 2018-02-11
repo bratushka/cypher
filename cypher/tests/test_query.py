@@ -227,75 +227,36 @@ class MatchTests(TestCase):
         )
         self.assertEqual(query, expected)
 
-#     def test_match_path_front_direction(self):
-#         """
-#         Match a path with front direction.
-#         """
-#         query = Query()\
-#             .match(None)\
-#             .connected_through(None)\
-#             .to(None)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH _p1 = (_a)-[_b]->(_c)\n'
-#             'RETURN _a, _b, _c'
-#         )
-#         self.assertEqual(query, expected)
-#
-#     def test_path_with_edge_instance(self):
-#         """
-#         Match a path with edge instance instead of edge model.
-#         """
-#         class Knows(Edge):
-#             """
-#             Example of Edge.
-#             """
-#             pass
-#
-#         instance = Knows(uid='instance_uid')
-#         query = Query()\
-#             .match(None)\
-#             .connected_through(instance)\
-#             .to(None)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH _p1 = (_a)-[_b:Knows]->(_c)\n'
-#             'WHERE _b.uid = "instance_uid"\n'
-#             'RETURN _a, _b, _c'
-#         )
-#
-#         self.assertEqual(query, expected)
-#
-#     def test_match_double_path(self):
-#         """
-#         A matching chain should split into 2 MATCH statements.
-#         """
-#         class User(Node):
-#             """
-#             Example of Node.
-#             """
-#             pass
-#
-#         class Knows(Edge):
-#             """
-#             Example of Edge.
-#             """
-#             pass
-#
-#         query = Query()\
-#             .match((None, 'b'))\
-#             .connected_through((Knows, 'a'))\
-#             .with_(User)\
-#             .connected_through(None)\
-#             .with_(User)\
-#             .result(no_exec=True)
-#         expected = (
-#             'MATCH _p1 = (b)-[a:Knows]-(_a:User)\n'
-#             'MATCH _p2 = (_a)-[_b]-(_c:User)\n'
-#             'RETURN b, a, _a, _b, _c'
-#         )
-#         self.assertEqual(query, expected)
-#
+    def test_path_with_edge_instance(self):
+        """
+        Match a path with edge instance instead of Edge type.
+        """
+        class Knows(Edge):
+            """
+            Example of Edge.
+            """
+            class Meta(Edge.Meta):
+                """
+                Example of Edge.Meta.
+                """
+                primary_key = 'reason'
+
+            reason = Props.String()
+
+        instance = Knows(reason='some reason')
+        query = Query()\
+            .match(None)\
+            .connected_through(instance)\
+            .to(None)\
+            .result(no_exec=True)
+        expected = (
+            'MATCH _p1 = (_a)-[_b:Knows]->(_c)\n'
+            'WHERE _b.reason = "some reason"\n'
+            'RETURN _a, _b, _c'
+        )
+
+        self.assertEqual(query, expected)
+
 #     def test_connected_through_with_connection_length(self):
 #         """
 #         Pass `conn` argument to the `connected_through` method.
