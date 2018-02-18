@@ -296,6 +296,38 @@ class MatchTests(TestCase):
             'WITH *, relationships(_p4) as _h\n'
             'RETURN _a, _b, _c, _d, _e, _f, _g, _h, _i'
         )
+
+        self.assertEqual(query, expected)
+
+    def test_match_cycle(self):
+        """
+        Test a cyclic path user-[a]->b-[c]->user-[d]-user<-[e]-user.
+        """
+        class User(Node):
+            """
+            Example of Node.
+            """
+
+        query = Query()\
+            .match(User, 'user')\
+            .connected_through(None)\
+            .to(User)\
+            .connected_through(None)\
+            .to_var('user')\
+            .connected_through(None)\
+            .with_var('user')\
+            .connected_through(None)\
+            .by_var('user')\
+            .result(no_exec=True)
+
+        expected = (
+            'MATCH _p1 = (user:User)-[_a]->(_b:User)\n'
+            'MATCH _p2 = (_b)-[_c]->(user)\n'
+            'MATCH _p3 = (user)-[_d]-(user)\n'
+            'MATCH _p4 = (user)<-[_e]-(user)\n'
+            'RETURN user, _a, _b, _c, _d, _e'
+        )
+
         self.assertEqual(query, expected)
 #
 #

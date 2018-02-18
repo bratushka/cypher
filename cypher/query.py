@@ -4,6 +4,7 @@ Cypher query builder.
 import enum
 import itertools
 import string
+from collections import OrderedDict
 from typing import (
     Callable,
     Generator,
@@ -12,6 +13,7 @@ from typing import (
     MutableMapping,
     List,
     Optional,
+    MutableSet,
     Tuple,
     Type,
     Union,
@@ -62,8 +64,13 @@ class Chain:
     """
     Base class for all chains.
     """
-    def __init__(self, details: Mapping[str, ModelDetails]):
+    def __init__(
+            self,
+            details: Mapping[str, ModelDetails],
+            defined: MutableSet,
+    ):
         self.details = details
+        self.defined = defined
         self.elements: List[str] = []
 
 
@@ -71,8 +78,8 @@ class MatchingChain(Chain):
     """
     Matching chain builder.
     """
-    def __init__(self, details):
-        super().__init__(details)
+    def __init__(self, details, defined):
+        super().__init__(details, defined)
 
         self.directions: List[Direction] = []
         self.paths: List[str] = []
@@ -131,17 +138,29 @@ class MatchingChain(Chain):
         """
         if len(self.elements) == 1:
             element = self.elements[0]
+            self.defined.add(element)
+
             query = 'MATCH (%s)' % self.details[element].get_var_and_labels()
         else:
             paths = []
             for i in range(len(self.paths)):
-                if i == 0:
-                    start = self.details[self.elements[0]].get_var_and_labels()
-                else:
+                if self.elements[i * 2] in self.defined:
                     start = self.elements[i * 2]
+                else:
+                    start_details = self.details[self.elements[i * 2]]
+                    start = start_details.get_var_and_labels()
+                    self.defined.add(start_details.var)
 
-                edge_index = i * 2 + 1
-                edge_details = self.details[self.elements[edge_index]]
+                if self.elements[i * 2 + 2] in self.defined:
+                    end = self.elements[i * 2 + 2]
+                else:
+                    end_details = self.details[self.elements[i * 2 + 2]]
+                    end = end_details.get_var_and_labels()
+                    self.defined.add(end_details.var)
+
+                edge_details = self.details[self.elements[i * 2 + 1]]
+                self.defined.add(edge_details.var)
+
                 if edge_details.conn is None:
                     edge = edge_details.get_var_and_labels()
                     rels_var = ''
@@ -168,7 +187,7 @@ class MatchingChain(Chain):
                     '<' if self.directions[i] == Direction.BACK else '',
                     edge,
                     '>' if self.directions[i] == Direction.FRONT else '',
-                    self.details[self.elements[i * 2 + 2]].get_var_and_labels(),
+                    end,
                     rels_var,
                 ))
             query = '\n'.join(paths)
@@ -189,6 +208,7 @@ class Query:
         self.path_generator = generate_paths()
         self.chains: List[Chain] = []
         self.details: MutableMapping[str, ModelDetails] = {}
+        self.defined: MutableSet = set()
         self.output: List[str] = []
 
     def _add_details(
@@ -217,7 +237,7 @@ class Query:
         var = self._add_details(identifier or Node, var)
         self.output.append(var)
 
-        chain = MatchingChain(self.details)
+        chain = MatchingChain(self.details, self.defined)
         chain.add_node(var)
         self.chains.append(chain)
 
@@ -290,6 +310,43 @@ class Query:
         # pylint: enable=no-member
         return self._by_to_with(Direction.FRONT, identifier, var)
 
+    def _by_to_with_var(
+            self,
+            direction: Direction,
+            var: str = None,
+    ) -> 'Query':
+        chain: MatchingChain = self.chains[-1]
+        chain.add_node(var, direction)
+
+        return self
+
+    def with_var(
+            self,
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node by variable to the `MatchingChain`. Direction undefined.
+        """
+        return self._by_to_with_var(Direction.NONE, var)
+
+    def by_var(
+            self,
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node by variable to the `MatchingChain`. Direction: back.
+        """
+        return self._by_to_with_var(Direction.BACK, var)
+
+    def to_var(
+            self,
+            var: str = None,
+    ) -> 'Query':
+        """
+        Add a Node by variable to the `MatchingChain`. Direction: front.
+        """
+        return self._by_to_with_var(Direction.FRONT, var)
+
     def where(self, *comparisons: Comparison) -> 'Query':
         """
         Add a condition to the matching chain.
@@ -308,8 +365,9 @@ class Query:
         """
         Execute the query and map the results.
         """
-        output = 'RETURN %s' % ', '.join(output or self.output)
-        query = '\n'.join((*map(str, self.chains), output))
+        output = output or OrderedDict.fromkeys(self.output).keys()
+        result = 'RETURN %s' % ', '.join(output)
+        query = '\n'.join((*map(str, self.chains), result))
 
         if no_exec:
             return query
